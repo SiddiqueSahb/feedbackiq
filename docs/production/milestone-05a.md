@@ -110,8 +110,16 @@ The brief named `src/feedbackiq/db/default_categories.json` as canonical. It is 
 `claude.md` forbids the engine from importing `feedbackiq.db` (enforced by a test). Keeping
 the file in `db/` allowed only two outcomes: break the engine/database boundary, or keep two
 copies — which is the defect. Moving one file to a package both sides may depend on removes
-the conflict. `git mv` preserved its history, and Milestone 4's document carries a forward
-pointer.
+the conflict, and Milestone 4's document carries a forward pointer.
+
+**A correction to that commit's message.** It says the move "preserves history". Checked
+afterwards, that is not accurate: although `git mv` was used, the file's content changed in
+the same commit (the version/provenance wrapper), so git recorded an **add plus a delete**
+rather than a rename, and `git log --follow src/feedbackiq/core/default_categories.json`
+stops at this milestone. The old path's history is still reachable explicitly —
+`git log -- src/feedbackiq/db/default_categories.json` shows `e048ccc` (Milestone 4) — so
+nothing is lost, but the commit message overstates it. The message is already pushed and is
+not being rewritten; this note is the correction.
 
 ### No silent fallback, anywhere
 
