@@ -4,13 +4,12 @@ classifier must filter irrelevant categories out at the shortlist stage, before
 NLI sees them -- checked with a deliberately mixed amazon/airline/yelp taxonomy.
 Embedder and classifier are stubbed so this runs without downloading models.
 """
-import sys, os, types
+import os, types
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, PROJECT_ROOT)
 os.chdir(PROJECT_ROOT)
 
 import numpy as np
-import nlp.categoriser as c
+import feedbackiq.nlp.categoriser as c
 
 # contaminated taxonomy: amazon + airline + yelp mixed together
 c.COMPLAINT_CATEGORIES = [

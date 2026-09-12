@@ -13,7 +13,6 @@ Usage: python evaluate/generate_figures.py
 from __future__ import annotations
 
 import os
-import sys
 import json
 import logging
 from pathlib import Path
@@ -22,14 +21,12 @@ os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 os.environ.setdefault("OMP_NUM_THREADS", "1")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-sys.path.append(str(PROJECT_ROOT))
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 
-from config import settings
+from feedbackiq.core.config import settings
 
 OUTPUT_DIR = PROJECT_ROOT / "data" / "results" / "figures"
 RESULTS_DIR = PROJECT_ROOT / "data" / "results"

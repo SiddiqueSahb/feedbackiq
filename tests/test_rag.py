@@ -5,14 +5,8 @@ Run:
     python tests/test_rag.py
 """
 
-import os
-import sys
 
-sys.path.append(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)
-
-from rag.pipeline import ask
+from feedbackiq.rag.pipeline import ask
 
 
 def print_response(response: dict) -> None:

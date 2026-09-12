@@ -29,15 +29,13 @@ import re
 import time
 import sys
 import warnings
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 import pandas as pd
 
 from datasets import Dataset
 
-import rag.pipeline as rag_pipeline_module
-from rag.pipeline import ask, _get_llm
-from config import settings
+import feedbackiq.rag.pipeline as rag_pipeline_module
+from feedbackiq.rag.pipeline import ask, _get_llm
+from feedbackiq.core.config import settings
 
 from langchain_core.prompts import PromptTemplate
 

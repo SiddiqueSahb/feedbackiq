@@ -12,17 +12,12 @@ import torch
 torch.set_num_threads(1)
 torch.set_num_interop_threads(1)
 
-import sys
 import time
 
-sys.path.append(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)
-
-from nlp.sentiment import get_finetuned
-from nlp.categoriser import categorise
-from nlp.embedding_service import semantic_search
-from nlp.summariser import analyse_review_with_llm
+from feedbackiq.nlp.sentiment import get_finetuned
+from feedbackiq.nlp.categoriser import categorise
+from feedbackiq.nlp.embedding_service import semantic_search
+from feedbackiq.nlp.summariser import analyse_review_with_llm
 
 
 def print_stage(stage):

@@ -19,8 +19,6 @@ Prerequisites:
 
 
 import os,sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 import json
 from typing import Any
 
@@ -38,7 +36,7 @@ from sklearn.metrics import (
     confusion_matrix,
     classification_report,
 )
-from config import settings
+from feedbackiq.core.config import settings
 
 
 GREEN  = "\033[92m"; YELLOW = "\033[93m"; CYAN = "\033[96m"
@@ -152,7 +150,7 @@ def evaluate_and_log(model_name:str,preds:list[int],model_type:str,params:dict[s
 # Model 1: Naive Bayes
 header("Model 1 — Naive Bayes (TF-IDF)  [Classical ML Baseline]")
 try:
-    from nlp.classical_models import NaiveBayesSentiment
+    from feedbackiq.nlp.classical_models import NaiveBayesSentiment
     nb = NaiveBayesSentiment()
     if nb._loaded:
         preds = [label_map.get(nb.predict(t)["label"], 1) for t in texts]
@@ -172,7 +170,7 @@ except Exception as e:
 #Model 2: Logistic Regression
 header("Model 2 — Logistic Regression (TF-IDF)  [Classical ML Baseline]")
 try:
-    from nlp.classical_models import LogisticRegressionSentiment
+    from feedbackiq.nlp.classical_models import LogisticRegressionSentiment
     lr = LogisticRegressionSentiment()
     if lr._loaded:
         preds = [label_map.get(lr.predict(t)["label"], 1) for t in texts]
@@ -193,7 +191,7 @@ except Exception as e:
 # Model 3: VADER
 header("Model 3 — VADER  [Rule-based Baseline]")
 try:
-    from nlp.sentiment import VaderSentiment
+    from feedbackiq.nlp.sentiment import VaderSentiment
     vader = VaderSentiment()
     preds = [label_map.get(vader.predict(t)["label"], 1) for t in texts]
     evaluate_and_log(
@@ -210,7 +208,7 @@ except Exception as e:
 header("Model 4 — RoBERTa  [Pre-trained Transformer]")
 print("  Loading RoBERTa (downloads ~500 MB on first run)...")
 try:
-    from nlp.sentiment import RobertaSentiment
+    from feedbackiq.nlp.sentiment import RobertaSentiment
     roberta = RobertaSentiment()
     preds   = [label_map.get(roberta.predict(t)["label"], 1) for t in texts]
     evaluate_and_log(
@@ -227,7 +225,7 @@ except Exception as e:
 # Model 5: DistilBERT Fine-tuned 
 header("Model 5 — DistilBERT (Fine-tuned)  [YOUR CONTRIBUTION]")
 try:
-    from nlp.sentiment import FineTunedSentiment
+    from feedbackiq.nlp.sentiment import FineTunedSentiment
     ft = FineTunedSentiment()
     if ft._loaded:
         preds = [label_map.get(ft.predict(t)["label"], 1) for t in texts]
@@ -340,5 +338,5 @@ if all_results:
 {CYAN}{BOLD}What to do next:{RESET}
   1. Open MLflow dashboard → screenshot for dissertation
   2. Copy results table above into your Results chapter
-  3. Run: python scripts/evaluate_rag.py
+  3. Run: python evaluate/evaluate_llm_vs_rag.py
 """)

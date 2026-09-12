@@ -16,9 +16,7 @@ import sys
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from config import settings
+from feedbackiq.core.config import settings
 
 LABEL_MAP = {"negative": 0, "neutral": 1, "positive": 2}
 

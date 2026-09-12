@@ -26,7 +26,6 @@ Sections (all written to results/category_discovery/):
 from __future__ import annotations
 
 import os
-import sys
 import json
 import random
 import logging
@@ -40,14 +39,12 @@ os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
 # Let this script be run from anywhere, e.g. `python evaluate/evaluate_category_discovery.py`
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-sys.path.append(str(PROJECT_ROOT))
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from config import settings
-from nlp.categoriser import categorise, COMPLAINT_CATEGORIES
+from feedbackiq.core.config import settings
+from feedbackiq.nlp.categoriser import categorise, COMPLAINT_CATEGORIES
 
 # Settings you can tweak without reading the rest of the file
 RANDOM_SEED = 42                 # keeps sampling + results reproducible

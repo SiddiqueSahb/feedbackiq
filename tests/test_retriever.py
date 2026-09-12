@@ -1,23 +1,20 @@
 
 from __future__ import annotations
-import sys, os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from typing import Optional, Any
-from logger import get_logger
+from feedbackiq.core.logging import get_logger
 from functools import lru_cache
-from config import settings
-from rag.prompts import RAG_PROMPT, CONDENSE_QUESTION_PROMPT, is_complaint_question
+from feedbackiq.core.config import settings
+from feedbackiq.rag.prompts import RAG_PROMPT, CONDENSE_QUESTION_PROMPT, is_complaint_question
 from langchain_classic.memory import ConversationBufferMemory
 
 
-from rag.pipeline import _get_vectorstore
+from feedbackiq.rag.pipeline import _get_vectorstore
 import faiss
 import numpy as np
 import pandas as pd
 from sentence_transformers import SentenceTransformer
 
-from config import settings
+from feedbackiq.core.config import settings
 
 index = faiss.read_index(settings.INDEX_PATH)
 print("FAISS index loaded")

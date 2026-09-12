@@ -32,8 +32,6 @@ from typing import Optional
 import pandas as pd
 import numpy as np
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 AMAZON_BEAUTY_PATH      = "data/raw/amazon/All_Beauty.jsonl.gz"
 AMAZON_GROCERY_PATH     = "data/raw/amazon/Grocery.jsonl.gz"
 AMAZON_ELECTRONICS_PATH = "data/raw/amazon/Electronics.jsonl.gz"

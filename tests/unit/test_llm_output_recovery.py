@@ -1,5 +1,5 @@
 """
-Structured LLM output and its error recovery - nlp/summariser.py
+Structured LLM output and its error recovery - feedbackiq.nlp.summariser
 
 Protects:
   * the business analysis must match the ReviewAnalysisLLM schema (5 keywords, fixed enums)
@@ -15,7 +15,7 @@ import json
 
 import pytest
 
-import nlp.summariser as summariser
+import feedbackiq.nlp.summariser as summariser
 
 VALID_ANALYSIS = {
     "summary": "The battery failed within a week and support did not reply.",

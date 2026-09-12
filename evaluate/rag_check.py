@@ -26,19 +26,16 @@ import json
 import math
 import os
 import statistics
-import sys
 import time
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from rag.pipeline import (                     # noqa: E402
+from feedbackiq.rag.pipeline import (                     # noqa: E402
     OUT_OF_SCOPE_MSG,
     SIMILARITY_THRESHOLD,
     _detect_platform_filter,
     _get_vectorstore,
     ask,
 )
-from rag.prompts import is_complaint_question  # noqa: E402
+from feedbackiq.rag.prompts import is_complaint_question  # noqa: E402
 
 QUESTIONS_FILE = os.path.join("evaluate", "rag_check_questions.json")
 OUTPUT_DIR = os.path.join("data", "results", "rag_check")

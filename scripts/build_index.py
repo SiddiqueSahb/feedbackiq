@@ -6,12 +6,11 @@ Usage:
     python scripts/build_index.py
 """
 import sys, os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import os, sys, json
 import numpy as np
 import pandas as pd
 
-from config import settings
+from feedbackiq.core.config import settings
 
 
 def main():
@@ -77,7 +76,7 @@ def main():
         print(f"  LangChain index skipped ({e}). RAG will fall back to direct FAISS.")
 
     print(f"\n  Index build complete!")
-    print(f"\nNext step → start the backend: uvicorn backend.api.main:app --reload")
+    print("\nNext step → start the backend: uvicorn feedbackiq.api.main:app --reload")
     print(f"Then start frontend:            streamlit run frontend/app.py")
 
 

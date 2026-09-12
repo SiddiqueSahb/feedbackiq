@@ -1,5 +1,5 @@
 """
-HTTP contract - backend/main.py, backend/api/deps.py, backend/api/routes/*
+HTTP contract - feedbackiq.api.main, feedbackiq.api.deps, feedbackiq.api.routes.*
 
 Protects:
   * authentication: missing key -> 401, wrong key -> 403, valid key -> accepted,
@@ -10,7 +10,7 @@ Protects:
 
 Uses FastAPI's TestClient against the real app, with service functions replaced by fakes.
 The client is created without a `with` block, which skips the startup hook that loads
-the 407 MB parquet file. Importing backend.main still imports torch, transformers and
+the 407 MB parquet file. Importing feedbackiq.api.main still imports torch, transformers and
 LangChain, so this file is the slowest part of the suite.
 """
 
@@ -18,11 +18,11 @@ import pytest
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 
-from backend.api.routes import rag as rag_routes
-from backend.api.routes import search as search_routes
-from backend.api.routes import sentiment as sentiment_routes
-from backend.main import app
-from config import settings
+from feedbackiq.api.routes import rag as rag_routes
+from feedbackiq.api.routes import search as search_routes
+from feedbackiq.api.routes import sentiment as sentiment_routes
+from feedbackiq.api.main import app
+from feedbackiq.core.config import settings
 
 VALID_KEY = {"x-api-key": settings.API_KEY}  # "test-api-key", set in tests/conftest.py
 

@@ -14,7 +14,6 @@ This script evaluates:
 Results are exported as CSV files for dissertation analysis.
 """
 
-import sys
 import os
 import time
 import matplotlib.pyplot as plt
@@ -22,12 +21,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-sys.path.append(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)
 
-
-from nlp.embedding_service import semantic_search
+from feedbackiq.nlp.embedding_service import semantic_search
 
 # Create output directory
 

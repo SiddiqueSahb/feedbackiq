@@ -26,7 +26,6 @@ Usage:
 from __future__ import annotations
 
 import os
-import sys
 import json
 import random
 import logging
@@ -39,15 +38,13 @@ os.environ.setdefault("OMP_NUM_THREADS", "1")
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-sys.path.append(str(PROJECT_ROOT))
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, f1_score
 
-from config import settings
+from feedbackiq.core.config import settings
 
 # Settings
 RANDOM_SEED = 42
@@ -118,8 +115,8 @@ def load_models() -> dict[str, object]:
     warning. FineTunedSentiment silently falls back to RoBERTa when its
     weights are missing, which would duplicate the RoBERTa column - so
     _loaded is checked here."""
-    from nlp.sentiment import VaderSentiment, RobertaSentiment, FineTunedSentiment
-    from nlp.classical_models import NaiveBayesSentiment, LogisticRegressionSentiment
+    from feedbackiq.nlp.sentiment import VaderSentiment, RobertaSentiment, FineTunedSentiment
+    from feedbackiq.nlp.classical_models import NaiveBayesSentiment, LogisticRegressionSentiment
 
     models: dict[str, object] = {}
 

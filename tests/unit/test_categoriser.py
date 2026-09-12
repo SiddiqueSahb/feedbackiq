@@ -1,5 +1,5 @@
 """
-Complaint categorisation - nlp/categoriser.py
+Complaint categorisation - feedbackiq.nlp.categoriser
 
 Protects the two-stage design the dissertation defends:
   1. embedding similarity picks a shortlist of candidate categories
@@ -14,8 +14,8 @@ The embedding model and the NLI classifier are replaced with small fakes: no dow
 import numpy as np
 import pytest
 
-import nlp.categoriser as categoriser
-from config import settings
+import feedbackiq.nlp.categoriser as categoriser
+from feedbackiq.core.config import settings
 
 # A deliberately mixed taxonomy (product, delivery, airline, fees, store), as in the original check.
 TAXONOMY = [

@@ -35,8 +35,6 @@ Pipeline:
 
 
 import sys, os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 import pickle                   # save trained models to disk
 from typing import Any
 
@@ -61,7 +59,7 @@ from sklearn.metrics import (
     precision_score,
     recall_score,
 )
-from config import settings
+from feedbackiq.core.config import settings
 
 
 # Phase 0: Load dataset

@@ -1,16 +1,13 @@
 """
-Quick pass/fail check for the RAG hallucination-prevention fixes
-(docs/RAG_Hallucination_Audit.md). Not a RAGAS run.
+Quick pass/fail check for the RAG hallucination-prevention fixes. Not a RAGAS run.
+The offline parts are also covered by tests/unit/test_rag_grounding.py.
 
-Run: python scripts/verify_rag_fixes.py
+Run: python evaluate/verify_rag_fixes.py
 (needs venv, GROQ_API_KEY in .env, built FAISS index)
 """
 import sys
-import os
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from rag.pipeline import ask  # noqa: E402
+from feedbackiq.rag.pipeline import ask  # noqa: E402
 
 # Each case: (label, question, expected_grounded, extra_check)
 # extra_check(result) -> str | None   (returns a failure reason, or None if ok)

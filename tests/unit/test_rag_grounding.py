@@ -1,5 +1,5 @@
 """
-Grounded question answering - rag/pipeline.py and rag/prompts.py
+Grounded question answering - feedbackiq.rag.pipeline and feedbackiq.rag.prompts
 
 Protects the hallucination-prevention behaviour measured in the dissertation:
   * retrieved reviews must clear SIMILARITY_THRESHOLD (0.35), and MMR can't bring back weaker ones
@@ -19,7 +19,7 @@ import pytest
 from langchain_core.documents import Document
 from langchain_core.runnables import RunnableLambda
 
-import rag.pipeline as pipeline
+import feedbackiq.rag.pipeline as pipeline
 
 NO_EVIDENCE_PREFIX = "I couldn't find enough relevant customer reviews"
 PROMPT_REFUSAL_RULE = "The retrieved reviews do not contain enough evidence to answer this question."

@@ -18,14 +18,12 @@ import re
 import time
 import sys
 import warnings
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 import pandas as pd
 
 from datasets import Dataset
 
-from rag.pipeline import ask
-from config import settings
+from feedbackiq.rag.pipeline import ask
+from feedbackiq.core.config import settings
 
 # Dedicated tuning for the RAGAS judge LLM. Deliberately separate from
 # rag.pipeline._get_llm(), whose 30s timeout and unset max_tokens are
@@ -40,7 +38,7 @@ from langchain_groq import ChatGroq
 
 # ragas 0.4.x unconditionally imports langchain_community.chat_models.vertexai,
 # which doesn't exist post LangChain 1.0 rebrand. Stub it out before importing
-# ragas (same fix as scripts/evaluate_rag.py).
+# ragas (the same compatibility shim noted in requirements.txt).
 import types as _types
 
 _vertexai_shim = _types.ModuleType("langchain_community.chat_models.vertexai")
@@ -114,7 +112,7 @@ def call_with_retry(fn, *args, max_retries: int = MAX_RATE_LIMIT_RETRIES, **kwar
 def _get_judge_llm() -> ChatGroq:
     """Build the Groq client used to judge/score, not to generate answers.
 
-    Kept separate from rag.pipeline._get_llm(): that one is tuned for
+    Kept separate from feedbackiq.rag.pipeline._get_llm(): that one is tuned for
     interactive chat (timeout=30, no explicit max_tokens) and truncates
     before the judge can finish a faithfulness/context_recall verdict on a
     multi-context RAG sample, which ragas surfaces as

@@ -1,5 +1,5 @@
 """
-Request validation - backend/models/schemas.py
+Request validation - feedbackiq.api.schemas
 
 Protects the limits and clean-up applied to every request before any model runs:
 length limits, control-character stripping, allowed model/platform values,
@@ -9,7 +9,7 @@ batch and history size caps.
 import pytest
 from pydantic import ValidationError
 
-from backend.models.schemas import (
+from feedbackiq.api.schemas import (
     BatchPredictRequest,
     ChatRequest,
     ReviewRequest,

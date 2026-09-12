@@ -4,7 +4,7 @@ near-duplicate topics ACROSS platforms into one consolidated taxonomy before
 an LLM names each merged cluster. Raw per-platform BERTopic topics are a
 clustering artifact, not a business taxonomy (lots of near-synonym topics,
 plus platform-irrelevant categories leaking into other platforms' predictions
-if used unmerged) -- see docs/methodology_review.md for the full rationale.
+if used unmerged) -- see the dissertation's methodology chapter for the rationale.
 
 Usage:
     python scripts/discover_categories.py                       # discover -> merge -> name, all platforms
@@ -23,7 +23,6 @@ Author: Mohammad Asim | MSc Dissertation 2026
 
 from __future__ import annotations
 import os, sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from sklearn.feature_extraction.text import CountVectorizer, ENGLISH_STOP_WORDS
 from bertopic.representation import KeyBERTInspired
 from langdetect import detect, LangDetectException, DetectorFactory
@@ -36,8 +35,8 @@ import numpy as np
 import pandas as pd
 from collections import Counter
 
-from config import settings
-from logger import get_logger
+from feedbackiq.core.config import settings
+from feedbackiq.core.logging import get_logger
 
 log = get_logger("discover_categories")
 representation_model = KeyBERTInspired()
@@ -703,7 +702,7 @@ def _run_classification_smoke_test(sentiment_tag: str) -> None:
     print(f"  Smoke-testing the new taxonomy against fixed test reviews")
     print(f"{'=' * 60}")
     try:
-        import nlp.categoriser as categoriser
+        import feedbackiq.nlp.categoriser as categoriser
         categoriser.reload_categories(sentiment_tag)
         for review in TEST_REVIEWS:
             result = categoriser.categorise(review)

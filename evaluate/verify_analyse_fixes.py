@@ -1,15 +1,13 @@
 """
-Verifies the Analyse-page LLM fixes (docs/Analyse_LLM_Audit.md, issues 1, 3, 4, 5).
+Verifies the Analyse-page LLM fixes (also covered offline by
+tests/unit/test_llm_output_recovery.py).
 No FAISS index needed - similar_reviews is passed in directly.
 
 Run: python evaluate/verify_analyse_fixes.py
 """
 import sys
-import os
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from nlp.summariser import (  # noqa: E402
+from feedbackiq.nlp.summariser import (  # noqa: E402
     analyse_review_with_llm,
     EMPTY_ANALYSIS,
     ANALYSE_SIMILARITY_THRESHOLD,

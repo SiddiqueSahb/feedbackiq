@@ -1,12 +1,6 @@
-import sys
-import os
-
-sys.path.append(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)
 
 
-from nlp.embedding_service import semantic_search
+from feedbackiq.nlp.embedding_service import semantic_search
 
 queries = [
     "battery stopped charging after one week",

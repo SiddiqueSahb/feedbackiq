@@ -1,5 +1,5 @@
 """
-Per-review analysis pipeline - backend/services/sentiment_service.py
+Per-review analysis pipeline - feedbackiq.services.sentiment_service
 
 Protects how the four stages are combined, and how the pipeline degrades when one fails:
   sentiment error      -> VADER result
@@ -13,7 +13,7 @@ Every model and the LLM are replaced with fakes.
 
 import pytest
 
-import backend.services.sentiment_service as service
+import feedbackiq.services.sentiment_service as service
 
 REVIEW = "The battery died after a week."
 CATEGORY = {"category": "Product Performance Failures", "score": 0.81, "description": "The product stops working."}

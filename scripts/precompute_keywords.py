@@ -26,13 +26,11 @@ from datetime import datetime, timezone
 import pandas as pd
 import spacy
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from backend.services.analytics_service import (  # noqa: E402
+from feedbackiq.services.analytics_service import (  # noqa: E402
     KEYWORD_FILTER_VERSION,
     normalise_phrase,
 )
-from config import settings  # noqa: E402
+from feedbackiq.core.config import settings  # noqa: E402
 
 # Keep more than the dashboard asks for (it requests 30, the API allows up to
 # 100) so the same file serves every reasonable `n` without recomputing.
