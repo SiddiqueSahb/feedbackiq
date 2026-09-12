@@ -11,7 +11,7 @@ import pytest
 from sqlalchemy import func, select
 
 from feedbackiq.db.models import Category, DataSource, Organisation
-from feedbackiq.db.seed import DEV_ORG_SLUG, seed
+from feedbackiq.db.seed import DEV_ORG_SLUG, default_categories, seed
 
 pytestmark = pytest.mark.integration
 
@@ -48,14 +48,15 @@ def test_seeding_installs_the_twenty_four_default_categories(session):
     assert all(category.source == "default" for category in categories)
 
 
-def test_the_seeded_categories_are_the_dissertations_taxonomy(session):
-    from feedbackiq.nlp.categoriser import COMPLAINT_CATEGORIES
-
+def test_the_seeded_categories_are_the_packaged_taxonomy(session):
+    """Compared against the packaged file, not `nlp.categoriser.COMPLAINT_CATEGORIES`:
+    that constant is loaded from gitignored research data and degrades to 7 static
+    categories wherever `data/` is absent, which is what broke this suite in CI."""
     seed(session)
     session.commit()
 
     names = set(session.scalars(select(Category.name)).all())
-    assert names == {entry["category"] for entry in COMPLAINT_CATEGORIES}
+    assert names == {entry["category"] for entry in default_categories()}
 
 
 def test_seeding_twice_changes_nothing(session):

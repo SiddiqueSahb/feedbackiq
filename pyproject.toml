@@ -97,6 +97,13 @@ Repository = "https://github.com/SiddiqueSahb/feedbackiq"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+# The default complaint taxonomy ships with the code. It must be present in a fresh clone
+# and inside the container image, because data/ is gitignored research output and
+# .dockerignore keeps it out of the image - CI caught the seed silently installing 7
+# fallback categories instead of 24 for exactly that reason.
+[tool.setuptools.package-data]
+"feedbackiq.db" = ["*.json"]
+
 # Test configuration lives here rather than in a separate pytest.ini, so the
 # project has one configuration file. Behaviour is unchanged from Milestone 1,
 # except that `pythonpath` is gone: the package is installed with `pip install -e .`,
