@@ -78,3 +78,11 @@ notebooks/
 
 # setuptools build metadata from `pip install -e .`
 *.egg-info/
+
+# Build artefacts. `pip wheel` / `python -m build` write these, and the packaging
+# verification in Milestone 5A runs pip wheel, so they appear during normal work.
+# Anchored with a leading slash: an unanchored rule is what hid backend/models/
+# from git in Milestone 1.
+/build/
+/dist/
+*.egg-info/
