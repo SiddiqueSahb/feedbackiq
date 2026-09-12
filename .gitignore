@@ -64,3 +64,14 @@ interview/
 # Submission artefacts
 *.zip
 *.docx
+
+# Kept on disk, deliberately not published (Milestone 1)
+# Personal/submission material: student URN, supervisor name, dissertation PDFs
+SUBMISSION.md
+FeedbackIQ_Case_Study.pdf
+GCP_DEPLOY_RUNBOOK.pdf
+# Dissertation notebooks: their saved outputs contain a university username
+notebooks/
+
+# pytest
+.pytest_cache/
