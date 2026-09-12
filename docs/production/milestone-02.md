@@ -47,6 +47,15 @@ feedbackiq/
 - Entry point is now `uvicorn feedbackiq.api.main:app`.
 - Every file moved with `git mv`, so history follows each one.
 
+> **A note on the commit history.** Commit `b23e227` carries the message
+> "Make FeedbackIQ an installable package", but a staging mistake in my commit script
+> meant it contains only the `git mv` renames and the `pytest.ini` deletion —
+> `pyproject.toml`, `core/paths.py` and every content change under `src/` were left out,
+> and that incomplete state was pushed (its CI run failed at `pip install -e ".[dev]"`,
+> exactly as it should have). Commit **`122b438`** adds what was missing. The published
+> history was not rewritten, so `b23e227`'s message reads as broader than its contents;
+> read the two commits together.
+
 ## 3. Package architecture
 
 | Package | Responsibility | Why it exists |
