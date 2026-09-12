@@ -6,23 +6,23 @@ __pycache__/
 *.pyo
 
 # Dataset
-data/
+/data/
 
 # Data (too large for git)
-data/raw/
+/data/raw/
 # Processed datasets
-data/processed/
+/data/processed/
 # Optional
 *.parquet
 
-data/embeddings/
+/data/embeddings/
 *.npy
 *.faiss
 *.gz
 
 
 # Models
-models/distilbert-finetuned/
+/models/distilbert-finetuned/
 
 # Jupyter
 .ipynb_checkpoints/
@@ -42,7 +42,7 @@ logs/
 # mlruns/
 
 # Classical models (large pickle files — don't commit)
-models/classical/
+/models/classical/
 
 # MLflow
 # =============================================================================
@@ -53,7 +53,7 @@ mlflow.db
 *.db
 
 # Models
-models/
+/models/
 artifacts/
 
 *.pkl
