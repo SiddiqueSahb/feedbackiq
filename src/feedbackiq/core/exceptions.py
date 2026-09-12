@@ -25,3 +25,13 @@ class DataNotFoundError(DataError):
 
         super().__init__(message)
         self.path = path
+
+
+class TaxonomyError(FeedBackError):
+    """
+    The complaint taxonomy is missing, unreadable or invalid.
+
+    Raised instead of quietly substituting a different taxonomy: categorising against
+    the wrong categories produces results that look correct and are not. See
+    core/taxonomy.py and docs/production/milestone-05a.md.
+    """

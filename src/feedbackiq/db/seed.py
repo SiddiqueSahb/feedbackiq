@@ -16,22 +16,20 @@ Two properties matter:
   research data measured in gigabytes; a development database needs none of it, and
   loading it would make every test run slow.
 
-The taxonomy is read from `default_categories.json`, which ships inside the package. It is
-derived from the file the dissertation's discovery script produced, trimmed to the three
-fields the product uses - so a fresh clone and a deployed container can both seed the real
-24 categories, which is not true of the gitignored `data/processed/` copy.
+The taxonomy comes from `feedbackiq.core.taxonomy` - the same canonical, packaged file the
+analytics engine categorises against, so the seeded rows and the categoriser can never
+disagree. See docs/production/milestone-05a.md.
 """
 
 from __future__ import annotations
 
 import argparse
-import json
-from importlib import resources
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from feedbackiq.core.logging import get_logger
+from feedbackiq.core.taxonomy import load_default_taxonomy, taxonomy_version
 from feedbackiq.db.models import Category, DataSource, Organisation
 from feedbackiq.db.session import session_scope
 
@@ -41,24 +39,15 @@ DEV_ORG_NAME = "Development Organisation"
 DEV_ORG_SLUG = "dev"
 DEV_SOURCE_NAME = "CSV upload"
 
-# Packaged alongside this module, so it is installed with the wheel.
-TAXONOMY_FILE = "default_categories.json"
-
-
 def default_categories() -> list[dict]:
     """
-    The 24 default complaint categories.
+    The canonical default categories to seed.
 
-    Read from the packaged JSON file rather than from `data/processed/`, because that
-    directory is gitignored research output and `.dockerignore` keeps it out of the
-    container image. A fresh clone and a deployed container must still be able to install
-    their own default taxonomy - CI caught the earlier version of this function silently
-    seeding the categoriser's 7 static fallback categories instead of the real 24.
+    A thin delegate on purpose: the seed must install exactly the taxonomy the engine
+    categorises against, so it reads the same canonical source rather than owning a copy.
+    Raises `TaxonomyError` if that source is missing or invalid.
     """
-    with resources.files("feedbackiq.db").joinpath(TAXONOMY_FILE).open(
-        encoding="utf-8"
-    ) as handle:
-        return json.load(handle)
+    return load_default_taxonomy()
 
 
 def seed(session: Session) -> dict[str, int]:
@@ -109,7 +98,9 @@ def _ensure_data_source(session: Session, organisation: Organisation) -> tuple[D
 
 
 def _ensure_default_categories(session: Session) -> int:
-    """Insert any of the 24 default categories that are not there yet."""
+    """Insert any of the canonical default categories that are not there yet."""
+    log.info("Seeding the canonical taxonomy, version %s", taxonomy_version())
+
     existing_names = set(
         session.scalars(
             select(Category.name).where(Category.organisation_id.is_(None))

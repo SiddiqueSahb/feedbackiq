@@ -2,10 +2,18 @@
 Zero-shot complaint categorisation: embedding retrieval narrows to a
 shortlist, then NLI reranks it (see categorise()).
 
-Categories come from discover_categories.py's single consolidated taxonomy
-(data/processed/complaint_categories_all_<sentiment>.json). Concatenating
-per-platform files instead caused cross-platform leakage (e.g. an airline
-category showing up for an Amazon review) — see the dissertation's methodology chapter.
+The default categories come from the canonical packaged taxonomy
+(`feedbackiq.core.taxonomy`), which is the same source the analytics engine and the
+database seed use. They are NOT read from data/processed/: that is gitignored research
+output, absent in a fresh clone, in CI and in the container image, and the loader used to
+substitute 7 static categories when it was missing - silently categorising against the
+wrong taxonomy (see docs/production/milestone-05a.md).
+
+A taxonomy discovered by `scripts/discover_categories.py` is still loadable explicitly,
+for research, through `load_research_taxonomy()` / `reload_categories()`. Those raise when
+the file is absent rather than falling back. Concatenating per-platform files caused
+cross-platform leakage (e.g. an airline category showing up for an Amazon review) - see
+the dissertation's methodology chapter.
 """
 
 from __future__ import annotations
@@ -16,7 +24,9 @@ import numpy as np
 from functools import lru_cache
 
 from feedbackiq.core.config import settings
+from feedbackiq.core.exceptions import TaxonomyError
 from feedbackiq.core.logging import get_logger
+from feedbackiq.core.taxonomy import load_default_taxonomy
 
 log = get_logger("nlp.categoriser")
 
@@ -25,64 +35,58 @@ _classifier_lock = threading.Lock()
 
 UNCLASSIFIED = "Unclassified / Emerging Complaint"
 
-# Static fallback — used only when no taxonomy file exists at all
-_STATIC_FALLBACK: list[dict] = [
-    {"category": "Product Quality Issues", "description": "The product itself is defective, broken, or below expected quality.", "exemplars": ["arrived broken", "poor quality", "defective item"]},
-    {"category": "Delivery & Shipping Issues", "description": "The order arrived late, damaged in transit, or was lost by the courier.", "exemplars": ["late delivery", "arrived damaged", "package lost"]},
-    {"category": "Customer Service Issues", "description": "Staff or support were unhelpful, rude, or unresponsive.", "exemplars": ["rude staff", "no response", "unhelpful support"]},
-    {"category": "Pricing & Value Issues", "description": "The price charged was unfair, hidden, or not worth the product/service received.", "exemplars": ["overpriced", "hidden fees", "not worth it"]},
-    {"category": "User Experience Issues", "description": "The product or service was confusing, difficult to use, or frustrating.", "exemplars": ["hard to use", "confusing interface", "frustrating experience"]},
-    {"category": "Technical Issues", "description": "The product or service malfunctioned, crashed, or failed to work as intended.", "exemplars": ["stopped working", "keeps crashing", "won't connect"]},
-    {"category": "Refund & Returns Issues", "description": "Difficulty obtaining a refund, exchange, or processing a return.", "exemplars": ["refund denied", "return rejected", "no exchange offered"]},
-]
-
 _PROCESSED_DIR = str(settings.taxonomy_dir)
 
 
-def _taxonomy_path(sentiment: str = "negative") -> str:
+def _research_taxonomy_path(sentiment: str = "negative") -> str:
+    """Where scripts/discover_categories.py writes a taxonomy it has just discovered."""
     return os.path.join(_PROCESSED_DIR, f"complaint_categories_all_{sentiment}.json")
 
 
-def _load_categories(sentiment: str = "negative") -> list[dict]:
+def _normalise(raw: list) -> list[dict]:
+    """Accept the current shape and the legacy flat list of strings."""
+    cats: list[dict] = []
+
+    for c in raw:
+        if isinstance(c, str):
+            cats.append({"category": c, "description": c, "exemplars": []})
+        else:
+            cats.append({
+                "category": str(c["category"]),
+                "description": str(c.get("description") or c["category"]),
+                "exemplars": [str(e) for e in c.get("exemplars", [])],
+            })
+
+    return cats
+
+
+def load_research_taxonomy(sentiment: str = "negative") -> list[dict]:
     """
-    Load the single consolidated complaint taxonomy for a sentiment class.
+    A taxonomy produced by the discovery script, for RESEARCH use.
 
-    Each entry: {"category": str, "description": str, "exemplars": [str, ...]}
-
-    No cross-file concatenation. If the consolidated file produced by
-    `discover_categories.py` (run without --platform) doesn't exist yet,
-    falls back to 7 static categories rather than silently mixing
-    platform-specific taxonomies together.
+    Raises rather than falling back. A missing file used to mean "quietly categorise
+    against 7 static categories", which produced wrong results that looked fine - the
+    defect CI caught in Milestone 4 and this milestone removed.
     """
-    path = _taxonomy_path(sentiment)
-    if os.path.exists(path):
-        with open(path) as f:
-            raw = json.load(f)
+    path = _research_taxonomy_path(sentiment)
 
-        cats: list[dict] = []
-        for c in raw:
-            if isinstance(c, str):
-                # backward-compat: legacy flat string list
-                cats.append({"category": c, "description": c, "exemplars": []})
-            else:
-                cats.append({
-                    "category": str(c["category"]),
-                    "description": str(c.get("description") or c["category"]),
-                    "exemplars": [str(e) for e in c.get("exemplars", [])],
-                })
-        log.info("Loaded %d categories from %s", len(cats), os.path.basename(path))
-        return cats
+    if not os.path.exists(path):
+        raise TaxonomyError(
+            f"No discovered taxonomy at '{path}'. This is research output, not part of "
+            f"the product. Run: python scripts/discover_categories.py --sentiment {sentiment}"
+        )
 
-    log.warning(
-        "No consolidated taxonomy at %s; using %d static fallback categories. "
-        "Run: python scripts/discover_categories.py --sentiment %s",
-        os.path.basename(path), len(_STATIC_FALLBACK), sentiment,
-    )
-    return list(_STATIC_FALLBACK)
+    with open(path) as f:
+        cats = _normalise(json.load(f))
+
+    log.info("Loaded %d %s categories from %s", len(cats), sentiment, os.path.basename(path))
+
+    return cats
 
 
-# Loaded once at import time
-COMPLAINT_CATEGORIES: list[dict] = _load_categories()
+# The canonical production taxonomy, packaged with the code. One source, shared with the
+# engine and the database seed, so no environment can categorise against a different set.
+COMPLAINT_CATEGORIES: list[dict] = load_default_taxonomy()
 
 
 def _hypothesis_text(cat: dict) -> str:
@@ -135,9 +139,17 @@ def _get_classifier(model_name: str):
 
 
 def reload_categories(sentiment: str = "negative") -> list[dict]:
-    """Reload the complaint taxonomy without restarting the application."""
+    """
+    Replace this process's taxonomy with a DISCOVERED one, for research.
+
+    Called by scripts/discover_categories.py after it writes a taxonomy, so one command
+    shows both the taxonomy and how it classifies. Raises `TaxonomyError` if that research
+    file does not exist - the product default is `load_default_taxonomy()` and is never
+    reached by accident from here.
+    """
     global COMPLAINT_CATEGORIES
-    COMPLAINT_CATEGORIES = _load_categories(sentiment)
+    COMPLAINT_CATEGORIES = load_research_taxonomy(sentiment)
+
     return COMPLAINT_CATEGORIES
 
 

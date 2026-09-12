@@ -1,0 +1,227 @@
+{
+  "taxonomy_id": "complaint-24",
+  "taxonomy_version": "1.0.0",
+  "category_count": 24,
+  "generated_on": "2026-08-08",
+  "generated_by": "scripts/discover_categories.py --sentiment negative (BERTopic per platform, then cross-platform merge)",
+  "source_file": "data/processed/complaint_categories_all_negative.json",
+  "notes": "Canonical production taxonomy. Shipped with the package so that a fresh clone, CI and the container image all categorise and seed against the same 24 categories. The generating research data is not required at runtime.",
+  "categories": [
+    {
+      "category": "Service and Wait Time Delays",
+      "description": "Customers experience unacceptable wait times or poor service from staff, impacting their overall experience.",
+      "exemplars": [
+        "long wait for food",
+        "poor service from staff",
+        "waited too long for a table"
+      ]
+    },
+    {
+      "category": "Salon Service Failures",
+      "description": "The salon fails to provide satisfactory services, resulting in customer dissatisfaction and frustration.",
+      "exemplars": [
+        "worst experience",
+        "salon failed me",
+        "services were poor"
+      ]
+    },
+    {
+      "category": "Product Taste and Aroma Failures",
+      "description": "The product has an unpleasant or unappealing taste or smell, affecting the overall quality and customer satisfaction.",
+      "exemplars": [
+        "taste horrible",
+        "smell bad",
+        "flavor is off"
+      ]
+    },
+    {
+      "category": "Visual Quality and Performance Failures",
+      "description": "The product's visual quality is poor, and it fails to perform as expected.",
+      "exemplars": [
+        "poor quality",
+        "cheap looking",
+        "stopped working"
+      ]
+    },
+    {
+      "category": "Hair Quality and Performance Failures",
+      "description": "The product fails to meet expectations for human hair quality, texture, or performance.",
+      "exemplars": [
+        "not human hair",
+        "hair horrible",
+        "tangles a lot"
+      ]
+    },
+    {
+      "category": "Travel Disruption Issues",
+      "description": "Travel plans are disrupted due to flight cancellations, delays, or lost luggage.",
+      "exemplars": [
+        "flight cancelled",
+        "lost bags",
+        "delayed flight"
+      ]
+    },
+    {
+      "category": "Product Performance Failures",
+      "description": "The product does not meet expectations, fails to deliver as promised, or has a poor overall quality.",
+      "exemplars": [
+        "one star. very poor product",
+        "one star. spent a month wasting my time with these terrible products",
+        "one star. product was not as good as advertised"
+      ]
+    },
+    {
+      "category": "Audio Performance Failures",
+      "description": "The product fails to deliver clear and consistent sound quality, often resulting in poor audio performance.",
+      "exemplars": [
+        "sound quality issues",
+        "headphones broke",
+        "audio stopped working"
+      ]
+    },
+    {
+      "category": "Financial Institution Service Failures",
+      "description": "The financial institution fails to provide adequate service, resulting in delays, inconvenience, or unauthorized transactions.",
+      "exemplars": [
+        "unauthorized charge",
+        "long wait time",
+        "inconvenient hours"
+      ]
+    },
+    {
+      "category": "Tablet Accessory Quality Failures",
+      "description": "The product fails to provide adequate protection, functionality, or durability for a tablet accessory.",
+      "exemplars": [
+        "case does not protect",
+        "screen protector broke",
+        "keyboard stopped working"
+      ]
+    },
+    {
+      "category": "Product Color Representation Failures",
+      "description": "The product's actual color does not match the representation shown in advertising or product images.",
+      "exemplars": [
+        "wrong color",
+        "color looks",
+        "colors shown"
+      ]
+    },
+    {
+      "category": "Facial Protection and Safety Failures",
+      "description": "The establishment fails to provide adequate facial protection or maintain a safe environment for customers.",
+      "exemplars": [
+        "employees dont wear masks",
+        "no precautions taken",
+        "mask mandate not enforced"
+      ]
+    },
+    {
+      "category": "Home Network Connectivity Issues",
+      "description": "The home network fails to connect, drops connections, or does not function as expected.",
+      "exemplars": [
+        "router not working",
+        "wifi drops frequently",
+        "home network dead"
+      ]
+    },
+    {
+      "category": "Product Fit and Sizing Issues",
+      "description": "The product does not fit properly, is too small, or has an incorrect size for the intended user.",
+      "exemplars": [
+        "too small",
+        "way too small",
+        "does not stay on"
+      ]
+    },
+    {
+      "category": "Order Fulfillment Delays",
+      "description": "The customer's order is not fulfilled as expected, resulting in missing or incomplete items.",
+      "exemplars": [
+        "only received half the order",
+        "only one pack sent",
+        "i only receive one pack"
+      ]
+    },
+    {
+      "category": "Spray Bottle, Continuous Spray, Dryer Diffuser, Fit Dryer",
+      "description": "Complaints related to: spray bottle, spray bottles, continuous spray, does spray, dryer diffuser, fit dryer.",
+      "exemplars": [
+        "spray bottle",
+        "spray bottles",
+        "continuous spray"
+      ]
+    },
+    {
+      "category": "Accessory Attachment and Fastening Failures",
+      "description": "The product's accessories or fastening mechanisms break or detach prematurely, causing inconvenience or damage.",
+      "exemplars": [
+        "strap broke",
+        "zipper broke",
+        "shoulder strap"
+      ]
+    },
+    {
+      "category": "Mounting and Installation Problems",
+      "description": "The product fails to assemble or install correctly, often due to missing parts or incorrect instructions.",
+      "exemplars": [
+        "tv mount issues",
+        "parts missing",
+        "hard to assemble"
+      ]
+    },
+    {
+      "category": "GPS Device Performance Failures",
+      "description": "The GPS device fails to function correctly, loses signal, or provides inaccurate location data.",
+      "exemplars": [
+        "gps not working",
+        "lost signal",
+        "inaccurate location"
+      ]
+    },
+    {
+      "category": "Laptop Cooling System Failures",
+      "description": "The laptop cooling system fails to provide adequate cooling, resulting in overheating or poor performance.",
+      "exemplars": [
+        "fan stopped working",
+        "laptop fan loud",
+        "cooling pad not effective"
+      ]
+    },
+    {
+      "category": "Mirror Performance Failures",
+      "description": "The mirror fails to function properly, does not provide adequate light, or stops working after a short period of time.",
+      "exemplars": [
+        "mirror failed",
+        "light mirror stopped working",
+        "mirror stopped lighting up"
+      ]
+    },
+    {
+      "category": "Customer Service Apology Failures",
+      "description": "The company fails to provide a satisfactory apology or show remorse for a negative experience.",
+      "exemplars": [
+        "where's my apology",
+        "hate the lack of apology",
+        "simple apology not enough"
+      ]
+    },
+    {
+      "category": "Digital Platform Performance Failures",
+      "description": "The digital platform fails to function as expected, resulting in errors or inconsistencies across mobile and web interfaces.",
+      "exemplars": [
+        "mobile site not working",
+        "app doesn't load",
+        "website error message"
+      ]
+    },
+    {
+      "category": "Direct Messaging Access Issues",
+      "description": "The customer is unable to send or receive direct messages due to a lack of mutual following or other technical issues.",
+      "exemplars": [
+        "follow dm",
+        "won't let me send a dm",
+        "can't send direct message"
+      ]
+    }
+  ]
+}

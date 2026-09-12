@@ -43,10 +43,16 @@ def default_categories() -> tuple[Category, ...]:
 
     This is a *default*, not a requirement: `analyse_batch(categories=...)` takes any
     taxonomy, which is how a customer's own categories will arrive later.
-    """
-    from feedbackiq.nlp.categoriser import COMPLAINT_CATEGORIES
 
-    return categories_from_dicts(COMPLAINT_CATEGORIES)
+    Milestone 5A: read from `core.taxonomy` - the one packaged source the database seed
+    also uses - instead of `nlp.categoriser`, which loaded it from gitignored research
+    data and silently substituted 7 categories when that was absent (CI, container image,
+    fresh clone). Raises `TaxonomyError` rather than categorising against a substitute.
+    See docs/production/milestone-05a.md.
+    """
+    from feedbackiq.core.taxonomy import load_default_taxonomy
+
+    return categories_from_dicts(load_default_taxonomy())
 
 
 def build_sentiment_model():
