@@ -97,6 +97,14 @@ class Settings(BaseSettings):
     LLM_TEMPERATURE: float = 0.2
     LLM_TIMEOUT: int = 30       # seconds; keeps a stuck call inside the frontend's timeout
 
+    # ---------------------------------------------------------------- database
+
+    # PostgreSQL, reached through psycopg 3 ("postgresql+psycopg://").
+    # The default matches the `postgres` service in docker-compose.yml as published on
+    # the host; inside the compose network the backend gets postgres:5432 instead.
+    # Nothing in the API reads the database yet - see docs/production/milestone-04.md.
+    DATABASE_URL: str = "postgresql+psycopg://feedbackiq:feedbackiq@localhost:55432/feedbackiq"
+
     # ---------------------------------------------------------------- API
 
     # Required in the x-api-key header on every /api/* route except health.

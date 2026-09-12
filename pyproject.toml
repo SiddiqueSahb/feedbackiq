@@ -44,6 +44,13 @@ dependencies = [
     # and the runtime fallback when the primary model fails.
     "spacy==3.8.14",
     "vaderSentiment==3.3.2",
+    # Persistence (Milestone 4). SQLAlchemy and Alembic were already installed but
+    # declared nowhere; psycopg is the one genuinely new dependency - PostgreSQL speaks
+    # its own wire protocol, and nothing in the existing stack can talk it. The [binary]
+    # extra ships a compiled wheel, so no local C toolchain or libpq is needed.
+    "sqlalchemy==2.0.51",
+    "alembic==1.18.5",
+    "psycopg[binary]==3.2.12",
 ]
 
 [project.optional-dependencies]
@@ -99,4 +106,13 @@ testpaths = ["tests/unit", "tests/api", "tests/benchmark"]
 addopts = "-ra"
 markers = [
     "benchmark: measures real model quality; needs the corpus and model files, so it skips when they are absent (including in CI)",
+    "integration: needs a real PostgreSQL database (see tests/integration/README or milestone-04.md)",
 ]
+
+# tests/integration is deliberately NOT in testpaths: those tests need a running
+# PostgreSQL, and `pytest` with no arguments must stay runnable by anyone who has only
+# cloned the repository. Run them explicitly, as CI does:
+#
+#   docker compose up -d postgres
+#   TEST_DATABASE_URL=postgresql+psycopg://feedbackiq:feedbackiq@localhost:55432/feedbackiq_test \
+#       pytest tests/integration

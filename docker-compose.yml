@@ -16,6 +16,38 @@
 
 services:
 
+  # PostgreSQL for local development (Milestone 4). Nothing in the API reads it yet;
+  # it exists so migrations, the seed script and the integration tests can run without
+  # anyone installing PostgreSQL by hand:
+  #
+  #   docker compose up -d postgres
+  #   alembic upgrade head
+  #   python -m feedbackiq.db.seed
+  #
+  # Published on 55432 to avoid clashing with a PostgreSQL already running on 5432.
+  # Credentials are development-only and deliberately in plain sight; a deployed
+  # database takes its URL from DATABASE_URL in the environment.
+  postgres:
+    image: postgres:16-alpine
+    container_name: feedbackiq-postgres
+    environment:
+      - POSTGRES_USER=feedbackiq
+      - POSTGRES_PASSWORD=feedbackiq
+      - POSTGRES_DB=feedbackiq
+    ports:
+      - "55432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U feedbackiq -d feedbackiq"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    # A named volume, not ./something: the database's files are not project files, and
+    # bind-mounting them onto macOS/Windows filesystems is both slow and a known source
+    # of permission problems.
+
   backend:
     build:
       context: .
@@ -28,6 +60,8 @@ services:
       - .env
     environment:
       - ENVIRONMENT=production
+      # Inside the compose network the database is reachable by service name.
+      - DATABASE_URL=postgresql+psycopg://feedbackiq:feedbackiq@postgres:5432/feedbackiq
     volumes:
       - ./data:/app/data
       - ./models:/app/models
@@ -49,6 +83,7 @@ services:
       - .env
     environment:
       - API_URL=http://backend:8000
+
     depends_on:
       # Waits for the backend's actual HEALTHCHECK (defined in
       # backend/Dockerfile, hits /api/health) to pass, not just for the
@@ -57,3 +92,8 @@ services:
       backend:
         condition: service_healthy
     restart: unless-stopped
+
+# Docker manages this one; `docker compose down -v` is what deletes the development
+# database. Without `down -v`, restarting compose keeps whatever was migrated and seeded.
+volumes:
+  postgres-data:
