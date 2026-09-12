@@ -1,16 +1,15 @@
-# CI for the backend and frontend only. The rest of the repository (model
-# training notebooks, evaluation scripts) needs multi-GB data/model files
-# that don't belong in a CI runner, so this pipeline deliberately doesn't
-# touch them.
+# CI for FeedbackIQ.
 #
-# Two jobs:
-#   lint          — fast, catches obvious errors in backend/ and frontend/
-#   docker-build  — proves the images actually build, which is the real
-#                    test of "is this deployable"
+# Three jobs, each waiting for the previous one:
+#   lint          fast: catches syntax errors and undefined names
+#   test          the offline pytest safety net (no models, datasets or API keys needed)
+#   docker-build  proves both images still build, the real test of "is this deployable"
 #
-# Nothing here pushes an image anywhere yet — see the commented-out step
-# at the bottom of docker-build for where that goes once a registry
-# (Docker Hub, GHCR, ECR, ...) is chosen.
+# The rest of the repository (training notebooks, evaluation scripts) needs
+# multi-GB data/model files that don't belong in a CI runner, so this pipeline
+# deliberately doesn't run them.
+#
+# Nothing here deploys, pushes an image, or uses secrets.
 
 name: CI
 
@@ -23,7 +22,7 @@ on:
 jobs:
 
   lint:
-    name: Lint backend & frontend
+    name: Lint backend, frontend & tests
     runs-on: ubuntu-latest
 
     steps:
@@ -49,10 +48,45 @@ jobs:
       - name: Lint frontend/
         run: flake8 frontend/ --select=E9,F
 
+      # Only the pytest suite; the older manual scripts in tests/ are not linted.
+      - name: Lint tests/
+        run: flake8 tests/conftest.py tests/unit tests/api --select=E9,F
+
+  test:
+    name: Run pytest
+    runs-on: ubuntu-latest
+    needs: lint
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            backend/requirements-extra.txt
+
+      # CPU-only PyTorch first, at the same version requirements.txt pins. The
+      # default Linux wheel from PyPI bundles several GB of CUDA libraries that
+      # the tests never use. pip then treats `torch==2.13.0` in requirements.txt
+      # as already satisfied.
+      - name: Install CPU-only PyTorch
+        run: pip install torch==2.13.0 --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r backend/requirements-extra.txt
+
+      # pytest.ini selects tests/unit and tests/api; tests/conftest.py keeps the
+      # run offline (no Hugging Face downloads, no Groq calls) and out of logs/.
+      - name: Run pytest
+        run: pytest
+
   docker-build:
     name: Build Docker images
     runs-on: ubuntu-latest
-    needs: lint
+    needs: test
 
     steps:
       - uses: actions/checkout@v4
