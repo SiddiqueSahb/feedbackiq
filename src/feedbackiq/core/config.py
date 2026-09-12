@@ -66,6 +66,11 @@ class Settings(BaseSettings):
     CATEGORY_CONFIDENCE_THRESHOLD: float = 0.35  # below this: "Unclassified / Emerging Complaint"
     CATEGORY_MAX_CHARS: int = 400          # review text given to the categoriser
 
+    # The sentiment gate: which sentiments get an issue category at all. Positive is
+    # excluded because the taxonomy was discovered from negative reviews, so a positive
+    # item has no complaint to categorise. Comma-separated; see engine/pipeline.py.
+    CATEGORISE_SENTIMENTS: str = "negative,neutral"
+
     # ---------------------------------------------------------------- retrieval & generation
     # These were constants in rag/pipeline.py and nlp/summariser.py. Same values,
     # now configurable. 0.35 was chosen by hand and never validated (see RESULTS.md);
@@ -121,6 +126,15 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.ENVIRONMENT.strip().lower() == "production"
+
+    @property
+    def categorise_sentiments(self) -> frozenset[str]:
+        """The sentiment gate as a set of lower-case labels (see engine/pipeline.py)."""
+        return frozenset(
+            label.strip().lower()
+            for label in self.CATEGORISE_SENTIMENTS.split(",")
+            if label.strip()
+        )
 
     @property
     def data_file(self) -> Path:
