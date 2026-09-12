@@ -109,7 +109,9 @@ class AnalyticsEngine:
         call per item are the expensive parts, and a bulk import does not need them.
         """
         if not items:
-            return BatchAnalysis(results=(), usage=UsageStats(), versions=manifest())
+            return BatchAnalysis(
+                results=(), usage=UsageStats(), versions=self._versions(categories)
+            )
 
         taxonomy = tuple(categories) if categories is not None else self.default_categories
         texts = [normalise_text(item.text) for item in items]
@@ -129,7 +131,23 @@ class AnalyticsEngine:
 
         usage = self.insight_generator.llm.usage if self.insight_generator else UsageStats()
 
-        return BatchAnalysis(results=tuple(results), usage=usage, versions=manifest())
+        return BatchAnalysis(
+            results=tuple(results), usage=usage, versions=self._versions(categories)
+        )
+
+    def _versions(self, categories: Sequence[Category] | None) -> dict[str, object]:
+        """
+        The manifest, plus which taxonomy this particular call used.
+
+        The manifest names the *default* taxonomy and its version. A caller-supplied
+        taxonomy has no version the engine can read, so the honest record is which of the
+        two was used - enough for a stored result to answer "which categories were these
+        chosen from?".
+        """
+        versions = manifest()
+        versions["taxonomy_source"] = "default" if categories is None else "caller"
+
+        return versions
 
     def analyse_one(
         self,

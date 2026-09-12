@@ -17,6 +17,7 @@ import json
 from functools import lru_cache
 
 from feedbackiq.core.config import settings
+from feedbackiq.core.taxonomy import taxonomy_provenance
 
 # The engine's own contract: stage order, gating rules, output shapes.
 ENGINE_VERSION = "1.0.0"
@@ -59,13 +60,24 @@ def sentiment_model_version() -> str:
 
 
 def manifest() -> dict[str, object]:
-    """Everything needed to explain how a result was produced."""
+    """
+    Everything needed to explain how a result was produced.
+
+    `taxonomy_id`/`taxonomy_version` identify the *default* taxonomy. Which taxonomy a
+    particular call actually used is recorded separately as `taxonomy_source`
+    (engine/pipeline.py), because a caller-supplied taxonomy carries no version the
+    engine can read.
+    """
+    provenance = taxonomy_provenance()
+
     return {
         "engine": ENGINE_VERSION,
         "sentiment_model": sentiment_model_version(),
         "categoriser_model": settings.ZEROSHOT_MODEL,
         "embedding_model": settings.EMBEDDING_MODEL,
         "llm_model": settings.GROQ_MODEL,
+        "taxonomy_id": provenance["id"],
+        "taxonomy_version": provenance["version"],
         "prompts": dict(PROMPT_VERSIONS),
         "thresholds": {
             "category_confidence": settings.CATEGORY_CONFIDENCE_THRESHOLD,

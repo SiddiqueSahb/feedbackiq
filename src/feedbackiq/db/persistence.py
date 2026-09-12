@@ -269,9 +269,20 @@ def _create_run(
         # `engine` is the manifest key; missing only if a caller built a BatchAnalysis by
         # hand, in which case "unknown" is more honest than crashing.
         engine_version=str(versions.get("engine", "unknown")),
+        # `taxonomy_*` is stored alongside the model versions so a result can answer which
+        # taxonomy produced it, and whether that taxonomy was the packaged default or one
+        # the caller supplied.
         model_versions={
             key: versions[key]
-            for key in ("sentiment_model", "categoriser_model", "embedding_model", "llm_model")
+            for key in (
+                "sentiment_model",
+                "categoriser_model",
+                "embedding_model",
+                "llm_model",
+                "taxonomy_id",
+                "taxonomy_version",
+                "taxonomy_source",
+            )
             if key in versions
         },
         prompt_versions=dict(versions.get("prompts") or {}),
