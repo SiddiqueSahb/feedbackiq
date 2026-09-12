@@ -95,5 +95,8 @@ where = ["src"]
 # except that `pythonpath` is gone: the package is installed with `pip install -e .`,
 # so nothing needs to add the project root to sys.path any more.
 [tool.pytest.ini_options]
-testpaths = ["tests/unit", "tests/api"]
+testpaths = ["tests/unit", "tests/api", "tests/benchmark"]
 addopts = "-ra"
+markers = [
+    "benchmark: measures real model quality; needs the corpus and model files, so it skips when they are absent (including in CI)",
+]
