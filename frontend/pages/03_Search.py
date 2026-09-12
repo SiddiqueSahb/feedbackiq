@@ -3,15 +3,9 @@ Semantic Search — find reviews similar in meaning to a natural language query,
 using the FAISS index rather than exact keyword matching.
 """
 
-import os
-import sys
 
 import pandas as pd
 import streamlit as st
-
-sys.path.append(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)
 
 import theme
 from utils import api_post, page_header, sidebar_status

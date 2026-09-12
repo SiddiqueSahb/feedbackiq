@@ -5,16 +5,10 @@ Reads and displays results already produced by scripts/evaluate_*.py — sentime
 retrieval (TF-IDF vs semantic) and RAG/RAGAS. Runs nothing itself.
 """
 
-import os
-import sys
 
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-
-sys.path.append(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)
 
 import theme
 from utils import api_get, page_header, sidebar_status

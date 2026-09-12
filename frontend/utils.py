@@ -5,34 +5,28 @@ Base URL + GET/POST helpers with error handling, so pages don't repeat the
 same requests.get(...)/try/except boilerplate.
 """
 
-import os
 import re
-import sys
 
 import requests
 import streamlit as st
 
-sys.path.append(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)
+from app_settings import settings
 
-from config import settings
-
-API = os.getenv("API_URL", settings.API_URL)
+API = settings.API_URL
 
 # Every /api/* route except /api/health requires this header (see
-# backend/api/deps.py). Read from env so the key isn't hardcoded here.
-API_KEY = os.getenv("API_KEY", settings.API_KEY)
+# feedbackiq/api/deps.py). Configured, never hardcoded.
+API_KEY = settings.API_KEY
 HEADERS = {"x-api-key": API_KEY}
 
 # First request after a cold start can take ~a minute (FAISS index + models
 # load lazily, not at startup). 90s covers that; the old 15s timeout failed
 # against a freshly started but healthy backend.
-GET_TIMEOUT = int(os.getenv("API_GET_TIMEOUT", "90"))
+GET_TIMEOUT = settings.API_GET_TIMEOUT
 
 # No model loading behind health, so it should be fast — kept short since
 # the sidebar calls it on every page render.
-HEALTH_TIMEOUT = int(os.getenv("API_HEALTH_TIMEOUT", "10"))
+HEALTH_TIMEOUT = settings.API_HEALTH_TIMEOUT
 
 # Used everywhere sentiment is shown, so colors stay consistent across pages.
 SENTIMENT_COLORS = {

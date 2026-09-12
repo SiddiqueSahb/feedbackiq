@@ -7,16 +7,10 @@ Tabbed rather than stacked — one scroll made it hard to tell which output came
 from which stage.
 """
 
-import os
-import sys
 
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-
-sys.path.append(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)
 
 import theme
 from utils import api_get, api_post, page_header, sidebar_status, SENTIMENT_COLORS

@@ -5,14 +5,8 @@ retrieval-augmented generation.
 Every answer lists the reviews it drew on — that's what makes it checkable (RQ4).
 """
 
-import os
-import sys
 
 import streamlit as st
-
-sys.path.append(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)
 
 import theme
 from utils import api_post, page_header, render_sources, sidebar_status

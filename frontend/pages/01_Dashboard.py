@@ -4,16 +4,10 @@ Dashboard — corpus-level view of sentiment, ratings, categories and trends.
 KPI row + charts only — an earlier version repeated the same figures in prose three times.
 """
 
-import os
-import sys
 
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-
-sys.path.append(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)
 
 import theme
 from utils import api_get, page_header, sidebar_status, SENTIMENT_COLORS

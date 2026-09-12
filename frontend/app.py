@@ -8,12 +8,8 @@ Organised around the four research questions, not a feature list — each links
 to where that finding can be seen running.
 """
 
-import os
-import sys
 
 import streamlit as st
-
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import theme
 from utils import api_get, sidebar_status
