@@ -1,9 +1,30 @@
 # FeedbackIQ — instructions for Claude Code
 
-FeedbackIQ is an MSc dissertation project (sentiment analysis, zero-shot complaint
-categorisation, FAISS retrieval, grounded question answering) being turned into a
-B2B SaaS product **incrementally**. The audit and milestone plan live in
-`docs/production/`. Read `docs/production/07-production-roadmap.md` before proposing work.
+FeedbackIQ is a **production B2B SaaS product** for multi-tenant customer-feedback
+intelligence, built **incrementally** from an MSc dissertation (sentiment analysis,
+zero-shot complaint categorisation, FAISS retrieval, grounded question answering). The
+audit and milestone plan live in `docs/production/`. Read
+`docs/production/07-production-roadmap.md` before proposing work, and
+`docs/production/saas-architecture-direction.md` for the intended boundaries.
+
+## Product priority (from Milestone 5A)
+
+**SaaS product requirements take priority over dissertation compatibility.** The
+dissertation is historical source material and validated research — it is *not* the
+architectural specification.
+
+- Prefer a **simple production SaaS architecture** over preserving the dissertation
+  implementation exactly.
+- Preserve dissertation work that provides product value (models, evaluation methodology,
+  grounding rules, the taxonomy). Do not preserve research-specific implementation merely
+  because it existed.
+- "This would break dissertation compatibility" is **not** a valid reason to reject a
+  change. Classify instead: *must preserve* (validated ML/research capability), *safe to
+  change* (research implementation details unfit for production), or *intentionally
+  replaced later* (Streamlit UI, file-based datasets, global corpus retrieval, synchronous
+  processing). Document the decision.
+- Research reproducibility still matters: keep it working where it costs little, and say so
+  when it cannot be kept.
 
 ## Ground rules
 
@@ -13,7 +34,7 @@ B2B SaaS product **incrementally**. The audit and milestone plan live in
 3. **Small, reviewable changes.** Logical commits, not one large unexplained one.
    Never force-push; never rewrite pushed history.
 4. **Run the tests after every meaningful change:** `pytest` must stay at
-   **248 passed, 2 xfailed** or better (it was 104 passed, 4 xfailed before Milestone 3).
+   **267 passed, 2 xfailed** or better (it was 104 passed, 4 xfailed before Milestone 3).
    Never weaken or delete a test to get green, and never flip a strict `xfail` without
    documenting why the behaviour changed. The database suite is separate and needs a real
    PostgreSQL: `pytest tests/integration` (42 tests), not selected by a bare `pytest`.
@@ -84,4 +105,17 @@ alembic revision --autogenerate --rev-id 000N -m "what changed"
 - **The engine must never import SQLAlchemy, psycopg, Alembic or `feedbackiq.db`.** The
   engine returns typed results; `db/persistence.py` stores them. Enforced by
   `tests/integration/test_engine_db_boundary.py`.
+- **The taxonomy has exactly one canonical source:**
+  `src/feedbackiq/core/default_categories.json`, read through `core/taxonomy.py` (stdlib
+  only, no `core.config` import, so it works in a bare container). The engine default, the
+  database seed and `nlp/categoriser.py` all read it — **24 categories**. It is versioned
+  (`taxonomy_version`) and the version reaches stored results through the engine manifest.
+  - **Never add a fallback taxonomy.** A missing or invalid file raises `TaxonomyError`.
+    The 7-category `_STATIC_FALLBACK` was deleted in Milestone 5A because it silently
+    produced wrong categories wherever gitignored `data/` was absent (CI, the container
+    image, any fresh clone).
+  - Custom taxonomies stay injected: `analyse_batch(categories=...)`. Results record
+    `taxonomy_source` as `default` or `caller`.
+  - Research taxonomies (other sentiment classes) load explicitly via
+    `nlp.categoriser.load_research_taxonomy()`, which also raises rather than degrading.
 - Nothing in the API reads or writes the database yet — that is a later milestone.

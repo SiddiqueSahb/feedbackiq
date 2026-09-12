@@ -512,6 +512,11 @@ Milestone 1 (`backend/models/` matched by an unanchored ignore rule).
 The fix: the 24 categories are now **product reference data, shipped inside the package** as
 `src/feedbackiq/db/default_categories.json` (7,133 bytes), declared in
 `[tool.setuptools.package-data]` so it is installed with the wheel and present in the image.
+
+> **Superseded by [Milestone 5A](milestone-05a.md).** That file moved to
+> `src/feedbackiq/core/default_categories.json` (the engine must read it too, and the engine
+> may not import `feedbackiq.db`), gained version and provenance metadata, and is now read
+> through `core/taxonomy.py` by the engine, the seed *and* `nlp/categoriser.py`.
 It is generated from the dissertation's output and trimmed to the three fields the product
 uses — `category`, `description`, `exemplars` — leaving the research fields (`count`,
 `keywords`, `platforms`, `source_labels`, `source_topic_ids`) in the dissertation's own file.
@@ -686,7 +691,7 @@ ingestion endpoints; a category-management UI; importing the dissertation corpus
 | 4 | **Hard delete of an organisation is untested beyond the cascade probe.** Soft delete (`deleted_at`) is the intended offboarding path, and no purge job exists. |
 | 5 | **No connection-pool tuning under load.** `pool_size=5, max_overflow=5, pool_pre_ping=True` are defensible defaults chosen without measurement. |
 | 6 | **`feedback.rating` is `Numeric(3,1)`**, which assumes a numeric scale. A 👍/👎 or NPS-style source will need either a convention or another column. |
-| 7 | **`nlp/categoriser.py` still degrades silently.** It loads its taxonomy from gitignored `data/processed/`, so inside the container image it categorises against 7 static fallback categories instead of 24, logging a warning nobody reads. The seed no longer has this problem (§15); the categoriser does. Fixing it means pointing that loader at the packaged file, which changes serving behaviour and therefore needs approval and a benchmark run — it is not a silent edit. **Recommended as the first item of the next milestone.** |
+| 7 | ~~**`nlp/categoriser.py` still degrades silently.**~~ **Fixed in [Milestone 5A](milestone-05a.md).** It loaded its taxonomy from gitignored `data/processed/`, so inside the container image it categorised against 7 static fallback categories instead of 24. The `_STATIC_FALLBACK` is deleted, the engine and the categoriser now read the same canonical packaged taxonomy as the seed, and a missing taxonomy raises `TaxonomyError`. |
 
 ---
 
