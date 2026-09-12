@@ -30,13 +30,14 @@ RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt -r backend/requirements-extra.txt \
     && pip install --no-cache-dir https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
 
-# Application code. Only the pieces the backend actually imports —
-# everything else (data/, models/, notebooks/, docs/, tests/, scripts/,
-# evaluate/) is excluded by .dockerignore.
-COPY backend/ ./backend/
-COPY nlp/ ./nlp/
-COPY rag/ ./rag/
-COPY config.py logger.py exceptions.py ./
+# The application package, installed so `feedbackiq` is importable without any
+# sys.path manipulation. --no-deps because every dependency was already installed
+# from the pinned requirements files above; this step adds no versions of its own.
+# pyproject.toml also marks /app as the project root, which is how core/paths.py
+# resolves data/ and models/ (mounted as volumes at runtime).
+COPY pyproject.toml README.md ./
+COPY src/ ./src/
+RUN pip install --no-cache-dir -e . --no-deps
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -54,8 +55,8 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
 # Runner, Heroku — inject it as an environment variable. The ${PORT:-8000}
 # default keeps `docker run` and docker-compose behaving exactly as before.
 #
-# One worker deliberately. rag/pipeline.py and nlp/embedding_service.py both
+# One worker deliberately. feedbackiq.rag.pipeline and feedbackiq.nlp.embedding_service both
 # cache their loaded artefacts per process (lru_cache + a lock), so each
 # extra uvicorn worker would load its own ~1.4GB copy of the FAISS index.
 # Scale by running more containers, not more workers in one container.
-CMD exec uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1
+CMD exec uvicorn feedbackiq.api.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1

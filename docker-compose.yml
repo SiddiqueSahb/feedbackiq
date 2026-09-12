@@ -10,10 +10,9 @@
 # produced by the existing training/evaluation scripts, and don't belong
 # inside a container image that's supposed to just be "the code".
 #
-# This is also where the future pieces from the roadmap plug in: swap the
-# `backend` service's DATA_PATH for a MongoDB connection, add a `mongo`
-# service, add `mlflow`/`prometheus`/`grafana` services, etc. — without
-# touching the backend or frontend images themselves.
+# This is also where the future pieces from the roadmap plug in: add a
+# `postgres` service (Milestone 4) and point the backend at it, add
+# `prometheus`/`grafana` services, etc. — without touching the images themselves.
 
 services:
 

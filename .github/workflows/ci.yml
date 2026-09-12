@@ -22,7 +22,7 @@ on:
 jobs:
 
   lint:
-    name: Lint backend, frontend & tests
+    name: Lint src, frontend & tests
     runs-on: ubuntu-latest
 
     steps:
@@ -42,8 +42,8 @@ jobs:
       # cosmetic style rules like E402 on every file, not just these ones —
       # so this lint step matches the project's existing convention instead
       # of fighting it.
-      - name: Lint backend/
-        run: flake8 backend/ --select=E9,F
+      - name: Lint src/
+        run: flake8 src/ --select=E9,F
 
       - name: Lint frontend/
         run: flake8 frontend/ --select=E9,F
@@ -75,8 +75,11 @@ jobs:
       - name: Install CPU-only PyTorch
         run: pip install torch==2.13.0 --index-url https://download.pytorch.org/whl/cpu
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt -r backend/requirements-extra.txt
+      # Installs the package and its pinned runtime dependencies from
+      # pyproject.toml, plus the test extras. This also proves `pip install -e .`
+      # works in a clean environment.
+      - name: Install FeedbackIQ and test dependencies
+        run: pip install -e ".[dev]"
 
       # pytest.ini selects tests/unit and tests/api; tests/conftest.py keeps the
       # run offline (no Hugging Face downloads, no Groq calls) and out of logs/.
