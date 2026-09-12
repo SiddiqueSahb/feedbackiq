@@ -4,6 +4,10 @@ RAG pipeline: conversational customer complaint exploration.
 Business analysts ask questions about complaint patterns; retrieves
 relevant reviews from the FAISS index and generates grounded answers.
 Evaluated via RAGAS in evaluate/evaluate_llm_vs_rag.py.
+
+Refusals (out of scope, no evidence) are returned as a normal result with
+grounded=False; genuine failures raise EngineError/RetrievalError rather than
+being dressed up as an answer.
 """
 
 from __future__ import annotations
@@ -20,6 +24,7 @@ from typing import Optional, Any
 from feedbackiq.core.logging import get_logger
 from functools import lru_cache
 from feedbackiq.core.config import settings
+from feedbackiq.engine.errors import EngineError, RetrievalError
 from feedbackiq.rag.prompts import (
     RAG_PROMPT,
     CONDENSE_QUESTION_PROMPT,
@@ -420,22 +425,17 @@ def ask(question: str,chat_history: Optional[list[dict]] = None,) -> dict[str, o
             "grounded":        True,
         }
 
-    except FileNotFoundError as e:
-        log.error("Index not found: %s", e)
-        return {
-            "answer":          str(e),
-            "sources":         [],
-            "use_case":        "complaint_exploration",
-            "retrieval_count": 0,
-            "grounded":        False,
-        }
+    except FileNotFoundError as exc:
+        # Milestone 3: failures raise. Returning the exception text as an "answer" with
+        # HTTP 200 (what this did before) made a broken index indistinguishable from a
+        # real answer, both to the user and to monitoring. The route maps this to 503/500.
+        log.error("Search index not found: %s", exc)
+        raise RetrievalError(
+            "The feedback search index is unavailable."
+        ) from exc
 
-    except Exception as e:
-        log.error("RAG pipeline error: %s", e, exc_info=True)
-        return {
-            "answer":          f"An error occurred: {str(e)}",
-            "sources":         [],
-            "use_case":        "complaint_exploration",
-            "retrieval_count": 0,
-            "grounded":        False,
-        }
+    except Exception as exc:
+        log.error("RAG pipeline error: %s", exc, exc_info=True)
+        raise EngineError(
+            "Failed to answer the question."
+        ) from exc
