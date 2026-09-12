@@ -1,0 +1,60 @@
+# Runs the FeedbackIQ backend and frontend together.
+#
+#   docker compose up --build
+#
+# Backend:  http://localhost:8000  (docs at /docs)
+# Frontend: http://localhost:8501
+#
+# data/, models/, mlruns/ and logs/ are mounted from the host rather than
+# copied into the images (see .dockerignore) — they're multiple GB, already
+# produced by the existing training/evaluation scripts, and don't belong
+# inside a container image that's supposed to just be "the code".
+#
+# This is also where the future pieces from the roadmap plug in: swap the
+# `backend` service's DATA_PATH for a MongoDB connection, add a `mongo`
+# service, add `mlflow`/`prometheus`/`grafana` services, etc. — without
+# touching the backend or frontend images themselves.
+
+services:
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: feedbackiq-backend
+    container_name: feedbackiq-backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - ENVIRONMENT=production
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./mlruns:/app/mlruns
+      - ./logs:/app/logs
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    image: feedbackiq-frontend
+    container_name: feedbackiq-frontend
+    ports:
+      - "8501:8501"
+    env_file:
+      # Same file as the backend, so both containers read the same API_KEY.
+      # If they disagree the frontend gets 403s from every call.
+      - .env
+    environment:
+      - API_URL=http://backend:8000
+    depends_on:
+      # Waits for the backend's actual HEALTHCHECK (defined in
+      # backend/Dockerfile, hits /api/health) to pass, not just for the
+      # container process to start — otherwise the frontend can fire
+      # requests before the backend app has finished loading.
+      backend:
+        condition: service_healthy
+    restart: unless-stopped

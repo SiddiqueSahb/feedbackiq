@@ -1,0 +1,89 @@
+# CI for the backend and frontend only. The rest of the repository (model
+# training notebooks, evaluation scripts) needs multi-GB data/model files
+# that don't belong in a CI runner, so this pipeline deliberately doesn't
+# touch them.
+#
+# Two jobs:
+#   lint          — fast, catches obvious errors in backend/ and frontend/
+#   docker-build  — proves the images actually build, which is the real
+#                    test of "is this deployable"
+#
+# Nothing here pushes an image anywhere yet — see the commented-out step
+# at the bottom of docker-build for where that goes once a registry
+# (Docker Hub, GHCR, ECR, ...) is chosen.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+
+  lint:
+    name: Lint backend & frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install flake8
+        run: pip install flake8
+
+      # Checked against real errors only (unused imports, undefined names,
+      # syntax errors — the "F" codes plus E9). The rest of this codebase
+      # consistently does sys.path.insert() before its imports (needed so
+      # scripts run standalone as well as via the package), which trips
+      # cosmetic style rules like E402 on every file, not just these ones —
+      # so this lint step matches the project's existing convention instead
+      # of fighting it.
+      - name: Lint backend/
+        run: flake8 backend/ --select=E9,F
+
+      - name: Lint frontend/
+        run: flake8 frontend/ --select=E9,F
+
+  docker-build:
+    name: Build Docker images
+    runs-on: ubuntu-latest
+    needs: lint
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: false
+          tags: feedbackiq-backend:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: frontend/Dockerfile
+          push: false
+          tags: feedbackiq-frontend:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Once you have somewhere to push to, add a login step above this and
+      # switch push: false to push: true, e.g.:
+      #
+      # - name: Log in to Docker Hub
+      #   uses: docker/login-action@v3
+      #   with:
+      #     username: ${{ secrets.DOCKERHUB_USERNAME }}
+      #     password: ${{ secrets.DOCKERHUB_TOKEN }}

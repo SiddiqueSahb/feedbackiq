@@ -1,0 +1,14 @@
+# Streamlit theme — applies to every page under frontend/, since Streamlit
+# reads this relative to the directory the app is launched from (project
+# root, both locally and in Docker).
+#
+# Deep blue matches the "FeedbackIQ" branding already used in frontend/app.py
+# (#1F3864). Sentiment colours (positive/negative/neutral) are defined
+# separately in frontend/utils.py since they're data-driven, not theme-driven.
+
+[theme]
+primaryColor = "#1F3864"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F5F7FA"
+textColor = "#262730"
+font = "sans serif"

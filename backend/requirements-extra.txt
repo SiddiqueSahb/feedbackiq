@@ -1,0 +1,14 @@
+# Extra backend dependencies not in the root requirements.txt.
+#
+# Kept separate rather than editing requirements.txt directly, so the root
+# file — used by the existing training/evaluation scripts — stays untouched.
+# Installed together in backend/Dockerfile:
+#   pip install -r requirements.txt -r backend/requirements-extra.txt
+#
+# Versions verified compatible with root requirements.txt via a full
+# dependency resolve (2026-08-15). transformers isn't repeated here — it's
+# already pinned in requirements.txt and duplicating it risked the two
+# files drifting apart and pip picking whichever one it saw last.
+
+spacy==3.8.14
+vaderSentiment==3.3.2

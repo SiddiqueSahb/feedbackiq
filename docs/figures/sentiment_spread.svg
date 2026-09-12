@@ -1,0 +1,66 @@
+<svg viewBox="0 0 860 200" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,-apple-system,Segoe UI,sans-serif">
+<rect x="0" y="0" width="860" height="200" fill="#fcfcfb"/>
+<line x1="46" y1="162.0" x2="840" y2="162.0" stroke="#e1e0d9" stroke-width="1"/>
+<text x="36" y="166.0" font-size="12" fill="#898781" text-anchor="end">0.0</text>
+<line x1="46" y1="138.0" x2="840" y2="138.0" stroke="#e1e0d9" stroke-width="1"/>
+<text x="36" y="142.0" font-size="12" fill="#898781" text-anchor="end">0.2</text>
+<line x1="46" y1="114.0" x2="840" y2="114.0" stroke="#e1e0d9" stroke-width="1"/>
+<text x="36" y="118.0" font-size="12" fill="#898781" text-anchor="end">0.4</text>
+<line x1="46" y1="90.0" x2="840" y2="90.0" stroke="#e1e0d9" stroke-width="1"/>
+<text x="36" y="94.0" font-size="12" fill="#898781" text-anchor="end">0.6</text>
+<line x1="46" y1="66.0" x2="840" y2="66.0" stroke="#e1e0d9" stroke-width="1"/>
+<text x="36" y="70.0" font-size="12" fill="#898781" text-anchor="end">0.8</text>
+<line x1="46" y1="42.0" x2="840" y2="42.0" stroke="#e1e0d9" stroke-width="1"/>
+<text x="36" y="46.0" font-size="12" fill="#898781" text-anchor="end">1.0</text>
+<line x1="46" y1="162.0" x2="840" y2="162.0" stroke="#c3c2b7" stroke-width="1.5"/>
+<text x="125.4" y="45.9" font-size="12.5" font-weight="600" fill="#006300" text-anchor="middle">spread 0.020</text>
+<rect x="92.4" y="60.6" width="20" height="101.4" rx="4" ry="4" fill="#2a78d6"/>
+<text x="102.4" y="55.6" font-size="10.5" fill="#52514e" text-anchor="middle">0.84</text>
+<rect x="115.4" y="62.4" width="20" height="99.6" rx="4" ry="4" fill="#eb6834"/>
+<text x="125.4" y="57.4" font-size="10.5" fill="#52514e" text-anchor="middle">0.83</text>
+<rect x="138.4" y="59.9" width="20" height="102.1" rx="4" ry="4" fill="#1baf7a"/>
+<text x="148.4" y="54.9" font-size="10.5" fill="#52514e" text-anchor="middle">0.85</text>
+<text x="125.4" y="184.0" font-size="12.5" fill="#0b0b0b" text-anchor="middle" font-weight="600">DistilBERT</text>
+<text x="125.4" y="198.0" font-size="12.5" fill="#0b0b0b" text-anchor="middle" font-weight="600">(fine-tuned)</text>
+<text x="284.2" y="52.6" font-size="12.5" font-weight="600" fill="#52514e" text-anchor="middle">spread 0.151</text>
+<rect x="251.2" y="67.1" width="20" height="94.9" rx="4" ry="4" fill="#2a78d6"/>
+<text x="261.2" y="62.1" font-size="10.5" fill="#52514e" text-anchor="middle">0.79</text>
+<rect x="274.2" y="66.6" width="20" height="95.4" rx="4" ry="4" fill="#eb6834"/>
+<text x="284.2" y="61.6" font-size="10.5" fill="#52514e" text-anchor="middle">0.79</text>
+<rect x="297.2" y="84.8" width="20" height="77.2" rx="4" ry="4" fill="#1baf7a"/>
+<text x="307.2" y="79.8" font-size="10.5" fill="#52514e" text-anchor="middle">0.64</text>
+<text x="284.2" y="184.0" font-size="12.5" fill="#0b0b0b" text-anchor="middle" font-weight="400">Logistic</text>
+<text x="284.2" y="198.0" font-size="12.5" fill="#0b0b0b" text-anchor="middle" font-weight="400">Regression</text>
+<text x="443.0" y="52.6" font-size="12.5" font-weight="600" fill="#52514e" text-anchor="middle">spread 0.311</text>
+<rect x="410.0" y="66.6" width="20" height="95.4" rx="4" ry="4" fill="#2a78d6"/>
+<text x="420.0" y="61.6" font-size="10.5" fill="#52514e" text-anchor="middle">0.80</text>
+<rect x="433.0" y="71.1" width="20" height="90.9" rx="4" ry="4" fill="#eb6834"/>
+<text x="443.0" y="66.1" font-size="10.5" fill="#52514e" text-anchor="middle">0.76</text>
+<rect x="456.0" y="103.9" width="20" height="58.1" rx="4" ry="4" fill="#1baf7a"/>
+<text x="466.0" y="98.9" font-size="10.5" fill="#52514e" text-anchor="middle">0.48</text>
+<text x="443.0" y="184.0" font-size="12.5" fill="#0b0b0b" text-anchor="middle" font-weight="400">Naive</text>
+<text x="443.0" y="198.0" font-size="12.5" fill="#0b0b0b" text-anchor="middle" font-weight="400">Bayes</text>
+<text x="601.8" y="53.8" font-size="12.5" font-weight="600" fill="#52514e" text-anchor="middle">spread 0.231</text>
+<rect x="568.8" y="87.4" width="20" height="74.6" rx="4" ry="4" fill="#2a78d6"/>
+<text x="578.8" y="82.4" font-size="10.5" fill="#52514e" text-anchor="middle">0.62</text>
+<rect x="591.8" y="95.5" width="20" height="66.5" rx="4" ry="4" fill="#eb6834"/>
+<text x="601.8" y="90.5" font-size="10.5" fill="#52514e" text-anchor="middle">0.55</text>
+<rect x="614.8" y="67.8" width="20" height="94.2" rx="4" ry="4" fill="#1baf7a"/>
+<text x="624.8" y="62.8" font-size="10.5" fill="#52514e" text-anchor="middle">0.79</text>
+<text x="601.8" y="184.0" font-size="12.5" fill="#0b0b0b" text-anchor="middle" font-weight="400">RoBERTa</text>
+<text x="601.8" y="198.0" font-size="12.5" fill="#0b0b0b" text-anchor="middle" font-weight="400">(pretrained)</text>
+<text x="760.6" y="77.4" font-size="12.5" font-weight="600" fill="#52514e" text-anchor="middle">spread 0.163</text>
+<rect x="727.6" y="104.3" width="20" height="57.7" rx="4" ry="4" fill="#2a78d6"/>
+<text x="737.6" y="99.3" font-size="10.5" fill="#52514e" text-anchor="middle">0.48</text>
+<rect x="750.6" y="111.0" width="20" height="51.0" rx="4" ry="4" fill="#eb6834"/>
+<text x="760.6" y="106.0" font-size="10.5" fill="#52514e" text-anchor="middle">0.43</text>
+<rect x="773.6" y="91.4" width="20" height="70.6" rx="4" ry="4" fill="#1baf7a"/>
+<text x="783.6" y="86.4" font-size="10.5" fill="#52514e" text-anchor="middle">0.59</text>
+<text x="760.6" y="184.0" font-size="12.5" fill="#0b0b0b" text-anchor="middle" font-weight="400">VADER</text>
+<rect x="46" y="10" width="12" height="12" rx="3" fill="#2a78d6"/>
+<text x="64" y="20" font-size="12.5" fill="#0b0b0b">Amazon</text>
+<rect x="156" y="10" width="12" height="12" rx="3" fill="#eb6834"/>
+<text x="174" y="20" font-size="12.5" fill="#0b0b0b">Yelp</text>
+<rect x="266" y="10" width="12" height="12" rx="3" fill="#1baf7a"/>
+<text x="284" y="20" font-size="12.5" fill="#0b0b0b">Twitter</text>
+</svg>

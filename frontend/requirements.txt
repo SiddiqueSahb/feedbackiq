@@ -1,0 +1,16 @@
+# Frontend-only dependencies. Deliberately separate from the root
+# requirements.txt: the Streamlit app only talks to the backend over HTTP,
+# so it never needs torch, faiss, transformers or langchain. Keeping those
+# out of this image makes the frontend build in seconds instead of minutes
+# and keeps the image small.
+
+streamlit==1.33.0
+plotly==5.20.0
+pandas==2.1.4
+# Matches requests/pydantic-settings pins in requirements.txt and
+# backend/requirements-extra.txt — kept in sync deliberately, not required
+# by anything the frontend itself imports.
+requests==2.34.2
+pydantic-settings==2.15.0
+python-dotenv==1.0.1
+pydantic==2.10.6

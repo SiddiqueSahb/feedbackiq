@@ -1,0 +1,66 @@
+# Environment
+.env
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Dataset
+data/
+
+# Data (too large for git)
+data/raw/
+# Processed datasets
+data/processed/
+# Optional
+*.parquet
+
+data/embeddings/
+*.npy
+*.faiss
+*.gz
+
+
+# Models
+models/distilbert-finetuned/
+
+# Jupyter
+.ipynb_checkpoints/
+notebooks/.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# MLflow — keep experiment results in git (small JSON files)
+# mlruns/ is intentionally tracked so experiments are reproducible
+# Uncomment below to ignore if mlruns/ gets too large:
+# mlruns/
+
+# Classical models (large pickle files — don't commit)
+models/classical/
+
+# MLflow
+# =============================================================================
+mlruns/
+mlartifacts/
+mlflow.db
+*.sqlite
+*.db
+
+# Models
+models/
+artifacts/
+
+*.pkl
+*.joblib
+*.parquet
+interview/
+
+# Submission artefacts
+*.zip
+*.docx

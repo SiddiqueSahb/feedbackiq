@@ -1,0 +1,36 @@
+# Kept out of the Docker build context — either not needed at runtime, or
+# mounted as a volume instead (see docker-compose.yml). This keeps images
+# small and builds fast; none of this affects what the running containers
+# can see, since data/ and models/ are mounted back in at container start.
+
+.git/
+.github/
+
+venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+
+.env
+.env.*
+
+# Large, mounted as volumes at runtime instead of baked into the image
+data/
+models/
+mlruns/
+logs/
+results/
+
+# Not needed by the running app
+notebooks/
+docs/
+tests/
+scripts/
+evaluate/
+test_pipeline.py
+
+# OS / editor noise
+.DS_Store
+.vscode/
+.idea/

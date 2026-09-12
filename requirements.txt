@@ -1,0 +1,79 @@
+# ── Core data ─────────────────────────────────────────────────────────────────
+# numpy / pandas / scikit-learn / scipy are pinned to match what the saved
+# classical models (models/classical/*.pkl) were trained and pickled with —
+# bumping scikit-learn in particular risks the pickle failing to load or
+# silently behaving differently. Verified compatible with everything below.
+pandas==2.1.4
+numpy==1.26.4
+scikit-learn==1.3.2
+scipy==1.12.0
+# Bumped from 14.0.2: ragas==0.4.3 pulls in `datasets`, which requires
+# pyarrow>=15. 14.0.2 makes the whole file unresolvable — this was the most
+# likely cause of the "incompatible" pip error.
+pyarrow==15.0.2
+
+# ── Frontend ──────────────────────────────────────────────────────────────────
+streamlit==1.33.0
+plotly==5.20.0
+altair==5.3.0
+wordcloud==1.9.3
+matplotlib==3.8.4
+
+# ── Backend ───────────────────────────────────────────────────────────────────
+fastapi==0.115.12
+uvicorn[standard]==0.35.0
+
+pydantic==2.10.6
+# Bumped from 2.7.1: langchain-community==0.4.2 needs pydantic-settings>=2.10.1.
+pydantic-settings==2.15.0
+
+python-dotenv==1.0.1
+httpx==0.28.1
+
+# ── Experiment tracking ───────────────────────────────────────────────────────
+mlflow==2.12.1
+
+# ── Testing & code quality ────────────────────────────────────────────────────
+pytest==8.1.1
+pytest-asyncio==0.23.6
+flake8==7.0.0
+
+# ── Utilities ─────────────────────────────────────────────────────────────────
+# Bumped from 4.66.2: ragas==0.4.3 -> datasets requires tqdm>=4.66.3.
+tqdm==4.70.0
+# Bumped from 2.31.0: langchain-community==0.4.2 requires requests>=2.32.5.
+requests==2.34.2
+
+# ── RAG / LLM (rag/pipeline.py, rag/prompts.py) ────────────────────────────────
+# Versions pinned to match what's actually installed and working in venv/,
+# and verified as a mutually-compatible set with the rest of this file.
+#
+# rag/pipeline.py imports `langchain_classic` (create_history_aware_retriever,
+# create_retrieval_chain, create_stuff_documents_chain) — that package only
+# exists in the LangChain 1.0+ family (langchain-core>=1.0). Downgrading this
+# block to the older 0.3.x langchain scheme removes langchain_classic
+# entirely and breaks the RAG chat endpoint with
+# ModuleNotFoundError: No module named 'langchain_classic'. There is no bare
+# `langchain` import anywhere in this codebase, so it isn't listed here —
+# adding it back would reintroduce the 0.3.x/1.x conflict.
+torch==2.13.0
+transformers==5.14.1
+sentence-transformers==5.7.0
+faiss-cpu==1.15.0
+huggingface-hub==1.26.0
+
+langchain-core==1.5.3
+langchain-classic==1.0.8
+langchain-community==0.4.2
+langchain-text-splitters==1.1.2
+langchain-huggingface==1.2.2
+langchain-groq==1.1.3
+
+groq==0.37.1
+
+# ── RAG evaluation (scripts/evaluate_rag.py) ───────────────────────────────────
+# Pinned: ragas 0.4.x hard-imports a langchain-community submodule that no
+# longer exists post the LangChain 1.0 rebrand above. evaluate_rag.py includes
+# a compatibility shim that depends on this exact import path still breaking
+# the same way — if you bump ragas, re-check that shim still applies.
+ragas==0.4.3
