@@ -13,7 +13,7 @@ B2B SaaS product **incrementally**. The audit and milestone plan live in
 3. **Small, reviewable changes.** Logical commits, not one large unexplained one.
    Never force-push; never rewrite pushed history.
 4. **Run the tests after every meaningful change:** `pytest` must stay at
-   **244 passed, 2 xfailed** or better (it was 104 passed, 4 xfailed before Milestone 3).
+   **248 passed, 2 xfailed** or better (it was 104 passed, 4 xfailed before Milestone 3).
    Never weaken or delete a test to get green, and never flip a strict `xfail` without
    documenting why the behaviour changed. The database suite is separate and needs a real
    PostgreSQL: `pytest tests/integration` (42 tests), not selected by a bare `pytest`.

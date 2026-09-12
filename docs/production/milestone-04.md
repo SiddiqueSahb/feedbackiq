@@ -20,6 +20,7 @@ PostgreSQL in CI.
 | `src/feedbackiq/db/session.py` | one engine per process, `session_scope()` transaction helper |
 | `src/feedbackiq/db/persistence.py` | `BatchAnalysis` → rows; plain functions, no repository classes |
 | `src/feedbackiq/db/seed.py` | one development organisation + the 24 default categories, idempotent |
+| `src/feedbackiq/db/default_categories.json` | the 24-category default taxonomy, shipped **with the package** (see §15) |
 | `alembic.ini`, `migrations/` | migration environment and `0001_initial_schema.py` |
 | `tests/integration/` | 42 tests against a real PostgreSQL, including the engine/database boundary |
 | `docker-compose.yml` | a `postgres:16-alpine` service for local development |
@@ -488,12 +489,44 @@ edited without a migration fails CI instead of surfacing in production.
 - **Deterministic and idempotent.** Rows are identified by natural keys (the slug, the
   category name), so a second run reports `0, 0, 0` and changes nothing. Safe to run after
   every migration.
-- **The taxonomy has one definition.** It is read from
-  `feedbackiq.nlp.categoriser.COMPLAINT_CATEGORIES` — the file the dissertation's discovery
-  script produced — rather than copied into the seed, where it could drift.
 - **The 642,692-review corpus is not imported.** It is research data measured in gigabytes;
   a development database needs none of it, and a test suite that loaded it would be
   unusable. `test_the_seed_does_not_import_the_dissertation_corpus` keeps that honest.
+
+### The taxonomy ships with the package (a defect CI caught)
+
+The seed originally read the taxonomy from `feedbackiq.nlp.categoriser.COMPLAINT_CATEGORIES`,
+on the reasoning that the dissertation's own file should be the single definition. **CI
+failed, and it was right to.** That constant is loaded at import time from
+`data/processed/complaint_categories_all_negative.json`, which is:
+
+- gitignored (`/data/` in `.gitignore`), so it does not exist in a fresh clone, and
+- excluded from both container images (`data/` in `.dockerignore`).
+
+When the file is absent, `nlp/categoriser.py` falls back to **7 static categories** with a
+warning. So the seed installed 7 categories in CI — and would have installed 7 in any
+deployed container — while every document and test claimed 24. Locally it looked perfect,
+because locally the research data is present. This is the same class of defect CI found in
+Milestone 1 (`backend/models/` matched by an unanchored ignore rule).
+
+The fix: the 24 categories are now **product reference data, shipped inside the package** as
+`src/feedbackiq/db/default_categories.json` (7,133 bytes), declared in
+`[tool.setuptools.package-data]` so it is installed with the wheel and present in the image.
+It is generated from the dissertation's output and trimmed to the three fields the product
+uses — `category`, `description`, `exemplars` — leaving the research fields (`count`,
+`keywords`, `platforms`, `source_labels`, `source_topic_ids`) in the dissertation's own file.
+Provenance was verified: names, descriptions and exemplars are identical to the source, in
+the same order.
+
+`tests/unit/test_default_taxonomy.py` guards it from the **unit** suite, not the database
+suite, so a bare `pytest` catches a missing or malformed packaged file — no PostgreSQL
+required to detect a packaging mistake. A clean-clone simulation (pointing `TAXONOMY_DIR` at
+an empty directory) confirms the seed now returns 24 categories with `data/` absent.
+
+Note what was *not* changed: `nlp/categoriser.py` still loads its own copy the old way, so
+**serving behaviour is untouched**. That leaves a real pre-existing defect — in the container
+image the categoriser silently categorises against 7 fallback categories instead of 24 —
+recorded in the limitations below rather than fixed silently here.
 
 ---
 
@@ -570,8 +603,9 @@ watch — it is the one that grows per customer per upload.
 
 | Suite | Result |
 |---|---|
-| Existing suite (`pytest`) | **244 passed, 2 xfailed** — unchanged from Milestone 3 |
+| Existing suite (`pytest`) | **248 passed, 2 xfailed** — the 244 from Milestone 3, plus 4 new packaged-taxonomy tests; no existing test changed behaviour |
 | Database suite (`pytest tests/integration`) | **42 passed** against PostgreSQL 16.15 |
+| Clean-clone simulation (`TAXONOMY_DIR` empty) | seed returns **24** categories, not the 7 fallback |
 | `flake8 src frontend migrations tests/... --select=E9,F` | clean |
 | Backend image (`docker build --output type=cacheonly`) | exit 0 |
 | Frontend image | exit 0 |
@@ -601,6 +635,13 @@ database is touched. Lint now also covers `migrations/` and `tests/integration`.
 
 `tests/integration` is deliberately **not** in `testpaths`: a bare `pytest` must stay
 runnable by anyone who has only cloned the repository.
+
+**CI earned its keep on this milestone.** The first push (`c0ea547`) passed lint and the unit
+suite and failed `db-test`: 4 failed, 38 passed, with the seed installing 7 categories
+instead of 24. That is a defect no amount of local testing would have found, because the
+cause was a file that exists on my machine and nowhere else (§15). The suite was not
+weakened to accommodate it — the product was fixed and a unit test added so the same mistake
+fails faster next time.
 
 ### Dissertation artefacts
 
@@ -645,6 +686,7 @@ ingestion endpoints; a category-management UI; importing the dissertation corpus
 | 4 | **Hard delete of an organisation is untested beyond the cascade probe.** Soft delete (`deleted_at`) is the intended offboarding path, and no purge job exists. |
 | 5 | **No connection-pool tuning under load.** `pool_size=5, max_overflow=5, pool_pre_ping=True` are defensible defaults chosen without measurement. |
 | 6 | **`feedback.rating` is `Numeric(3,1)`**, which assumes a numeric scale. A 👍/👎 or NPS-style source will need either a convention or another column. |
+| 7 | **`nlp/categoriser.py` still degrades silently.** It loads its taxonomy from gitignored `data/processed/`, so inside the container image it categorises against 7 static fallback categories instead of 24, logging a warning nobody reads. The seed no longer has this problem (§15); the categoriser does. Fixing it means pointing that loader at the packaged file, which changes serving behaviour and therefore needs approval and a benchmark run — it is not a silent edit. **Recommended as the first item of the next milestone.** |
 
 ---
 
