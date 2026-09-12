@@ -303,6 +303,14 @@ errors no longer being returned as answers. **Two remain**, both API-level and o
 milestone's scope: `/analyse` accepts `platform` and ignores it, and `min_length` is
 checked before text is cleaned. No test was deleted or weakened.
 
+> **A note on two commit messages.** I wrote the commits for this milestone with unquoted
+> shell heredocs, so backticked words inside the messages were treated as command
+> substitution and silently dropped. Two pushed messages lost one word each:
+> `f12880e` reads "`/analyse ignoring , and`" (the word `platform` is missing) and
+> `a946ddb` reads "`registers the  marker`" (the word `benchmark` is missing). Only the
+> message text is affected - the commits' contents are correct and complete, and no other
+> message was damaged. Pushed history is not rewritten, so this note is the correction.
+
 ## 12. Compatibility with the existing API and Streamlit
 
 Adapters, not rewrites. The API's 22 routes, paths, schemas and status codes are unchanged.
