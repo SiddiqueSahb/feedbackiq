@@ -71,9 +71,9 @@ langchain-groq==1.1.3
 
 groq==0.37.1
 
-# ── RAG evaluation (scripts/evaluate_rag.py) ───────────────────────────────────
+# ── RAG evaluation (evaluate/evaluate_llm_vs_rag.py) ───────────────────────────
 # Pinned: ragas 0.4.x hard-imports a langchain-community submodule that no
-# longer exists post the LangChain 1.0 rebrand above. evaluate_rag.py includes
+# longer exists post the LangChain 1.0 rebrand above. That script includes
 # a compatibility shim that depends on this exact import path still breaking
 # the same way — if you bump ragas, re-check that shim still applies.
 ragas==0.4.3

@@ -8,7 +8,7 @@ Copy `.env.example` to `.env` and fill it in. Two values matter:
 - `API_KEY` — the shared secret every `/api/*` route requires in an
   `x-api-key` header (`/api/health` and `/` are deliberately open, so
   health checks work without credentials). Leave it blank locally and the
-  development default in `config.py` is used, with a warning on startup.
+  development default in `src/feedbackiq/core/config.py` is used, with a warning on startup.
 
 Set `ENVIRONMENT=production` and the backend **refuses to start** unless
 `API_KEY` is a real value — a deployment quietly running on a key that's
@@ -35,13 +35,13 @@ sample and labels the chart as sampled. Re-run it whenever
 
 ```bash
 # Backend (from the project root)
-uvicorn backend.main:app --reload --port 8000
+uvicorn feedbackiq.api.main:app --reload --port 8000
 
 # Frontend (separate terminal)
 streamlit run frontend/app.py
 ```
 
-The frontend reads `API_URL` from `config.py` / the environment, defaulting to `http://localhost:8000`.
+The frontend reads `API_URL` from `frontend/app_settings.py` / the environment, defaulting to `http://localhost:8000`.
 
 ## With Docker
 
@@ -119,8 +119,8 @@ gcloud compute ssh feedbackiq
 sudo apt-get update && sudo apt-get install -y docker.io docker-compose-v2 git
 sudo usermod -aG docker "$USER" && newgrp docker
 
-git clone <your-repo-url> FeedbackAnalytics_LLM
-cd FeedbackAnalytics_LLM
+git clone <your-repo-url> feedbackiq
+cd feedbackiq
 ./scripts/deploy/sync_artifacts.sh pull gs://feedbackiq-artifacts
 
 cat > .env <<'EOF'
@@ -167,14 +167,14 @@ and point `API_URL` at the backend's URL.
 
 ### Applies either way
 
-Keep uvicorn at one worker. `rag/pipeline.py` and `nlp/embedding_service.py`
+Keep uvicorn at one worker. `feedbackiq.rag.pipeline` and `feedbackiq.nlp.embedding_service`
 cache their artefacts per process, so a second worker means a second 1.4 GB
 copy of the index. Scale out with containers, not workers — the backend
 `CMD` already pins `--workers 1`.
 
 ## What was added
 
-- `backend/` — FastAPI app (`main.py`) with four route groups: sentiment, search, rag, analytics. Each route is a thin layer over the existing `nlp/` and `rag/` modules — no changes were made to those.
+- `src/feedbackiq/` — the installable application package: `api/` (FastAPI app with five route groups: sentiment, search, rag, analytics, evaluation), `services/`, `nlp/`, `rag/` and `core/` (settings, logging, paths).
 - `frontend/` — Streamlit pages: Dashboard (already existed), Analyse, Search, Chatbot, Upload.
 - `backend/Dockerfile`, `frontend/Dockerfile`, `docker-compose.yml` — images built from the project root; heavy data/model directories excluded via `.dockerignore` and mounted as volumes instead.
 - `.github/workflows/ci.yml` — lints `backend/` and `frontend/` and builds both images on every push/PR.
@@ -183,8 +183,8 @@ copy of the index. Scale out with containers, not workers — the backend
 
 Nothing below is built yet — this is just where each piece would go, based on how the project is currently structured:
 
-- **MongoDB**: swap `_load_df()` in `backend/services/analytics_service.py` for a Mongo query, add a `mongo` service to `docker-compose.yml`.
-- **Live ingestion (Amazon/Yelp/Twitter APIs)**: a new `backend/services/ingestion_service.py` writing into Mongo instead of the parquet file, called on a schedule or webhook.
-- **Retraining pipeline**: a script under `scripts/` that reruns `train_classical_models.py`/the fine-tuning notebook when new labelled data arrives, logged to the MLflow instance already configured in `config.py`.
+- **PostgreSQL** (the roadmap's Milestone 4): replace `_load_df()` in `src/feedbackiq/services/analytics_service.py` with SQL queries and add a `postgres` service to `docker-compose.yml`.
+- **Live ingestion**: a new `src/feedbackiq/services/ingestion_service.py` writing into PostgreSQL instead of the parquet file, called on a schedule or webhook.
+- **Retraining pipeline**: a script under `scripts/` that reruns `train_classical_models.py`/the fine-tuning notebook when new labelled data arrives, logged to the MLflow instance already configured in `src/feedbackiq/core/config.py`.
 - **DVC**: `dvc init`, then track `data/` and `models/` with it instead of (or alongside) the current `.gitignore` exclusions.
-- **Prometheus/Grafana**: add a `/metrics` endpoint to `backend/main.py` (e.g. via `prometheus-fastapi-instrumentator`) and `prometheus`/`grafana` services to `docker-compose.yml`.
+- **Prometheus/Grafana**: add a `/metrics` endpoint to `src/feedbackiq/api/main.py` (e.g. via `prometheus-fastapi-instrumentator`) and `prometheus`/`grafana` services to `docker-compose.yml`.

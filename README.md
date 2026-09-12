@@ -4,7 +4,7 @@
 
 **AI-powered customer feedback analytics using NLP, Retrieval-Augmented Generation and Large Language Models**
 
-[![CI](https://github.com/SiddiqueSahb/FeedbackAnalytics_LLM/actions/workflows/ci.yml/badge.svg)](https://github.com/SiddiqueSahb/FeedbackAnalytics_LLM/actions/workflows/ci.yml)
+[![CI](https://github.com/SiddiqueSahb/feedbackiq/actions/workflows/ci.yml/badge.svg)](https://github.com/SiddiqueSahb/feedbackiq/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.33-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io/)
@@ -135,29 +135,21 @@ The corpus then feeds three independent branches. Sentiment classification is su
 ## Repository structure
 
 ```
-FeedbackAnalytics_LLM/
-├── backend/                    FastAPI application
-│   ├── main.py                 app factory, router registration, health check
-│   ├── api/
-│   │   ├── deps.py             API-key auth, production boot guard
-│   │   └── routes/             sentiment · search · rag · analytics · evaluation
+feedbackiq/
+├── src/feedbackiq/             the installable application package
+│   ├── core/                   settings, logging, paths, exceptions
+│   ├── api/                    FastAPI app, API-key auth, routes, Pydantic schemas
 │   ├── services/               business logic, kept out of the route handlers
-│   ├── models/schemas.py       Pydantic request/response contracts
-│   └── Dockerfile
+│   ├── nlp/                    sentiment · classical models · categoriser ·
+│   │                           embeddings · LLM business-insight generation
+│   └── rag/                    vector store, grounded retriever, chain, prompts
 ├── frontend/                   Streamlit application
 │   ├── app.py                  entry point and navigation
 │   ├── pages/                  01 Dashboard … 06 Evaluation
 │   ├── theme.py · utils.py     shared styling and API client
+│   ├── app_settings.py         frontend-only settings (API URL and key)
 │   └── Dockerfile
-├── nlp/                        model layer
-│   ├── sentiment.py            five-classifier interface
-│   ├── classical_models.py     TF-IDF + NB / LogReg
-│   ├── categoriser.py          embedding shortlist → NLI rerank
-│   ├── embedding_service.py    MiniLM encoder, cached
-│   └── summariser.py           LLM business-insight generation
-├── rag/                        retrieval-augmented generation
-│   ├── pipeline.py             vector store, grounded retriever, chain
-│   └── prompts.py              grounding instructions, refusal string
+├── backend/Dockerfile          build files for the API image
 ├── scripts/                    offline pipeline
 │   ├── preprocess.py           build the unified corpus
 │   ├── train_classical_models.py
@@ -180,9 +172,9 @@ FeedbackAnalytics_LLM/
 ├── models/                     fine-tuned DistilBERT, classical models, BERTopic
 ├── mlruns/                     MLflow tracking
 ├── docs/figures/               architecture and results figures
-├── config.py                   pydantic-settings, single source of configuration
+├── pyproject.toml              packaging, dependency groups, pytest configuration
 ├── docker-compose.yml
-└── requirements.txt
+└── requirements.txt            pinned versions used by the dissertation scripts
 ```
 
 `data/` and `models/` are gitignored — roughly 13 GB of index and model artefacts produced by the pipeline scripts and mounted as volumes rather than committed.
@@ -374,13 +366,13 @@ Python 3.12 · Docker (optional) · a [Groq API key](https://console.groq.com) f
 ### Local setup
 
 ```bash
-git clone https://github.com/SiddiqueSahb/FeedbackAnalytics_LLM.git
-cd FeedbackAnalytics_LLM
+git clone https://github.com/SiddiqueSahb/feedbackiq.git
+cd feedbackiq
 
 python -m venv venv
 source venv/bin/activate          # Windows: venv\Scripts\activate
 
-pip install -r requirements.txt
+pip install -e ".[dev]"        # add ".[research]" for the evaluation scripts
 ```
 
 ### Environment variables
@@ -411,7 +403,7 @@ python scripts/discover_categories.py       # BERTopic → 24-category taxonomy
 ### Run
 
 ```bash
-uvicorn backend.main:app --reload --port 8000     # API   → localhost:8000/docs
+uvicorn feedbackiq.api.main:app --reload --port 8000   # API   → localhost:8000/docs
 streamlit run frontend/app.py                     # UI    → localhost:8501
 ```
 
@@ -426,7 +418,7 @@ Frontend on `:8501`, backend on `:8000`. The frontend waits on the backend's `/a
 ### Tests
 
 ```bash
-pytest tests/
+pytest
 ```
 
 ---

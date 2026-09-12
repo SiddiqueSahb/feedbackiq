@@ -43,7 +43,7 @@ gcloud services enable compute.googleapis.com storage.googleapis.com
 
 ## Phase 2 — One-time local prep: precompute keywords, stage artifacts
 
-Run these from your project root (`~/Desktop/FeedbackAnalytics_LLM`) with your local venv active.
+Run these from your project root (wherever you cloned the repository) with your local virtual environment active.
 
 ```bash
 # 1. Generate the dashboard keyword file so the VM doesn't have to
@@ -104,8 +104,8 @@ Everything below runs **on the VM**, once you're in:
 sudo apt-get update && sudo apt-get install -y docker.io docker-compose-v2 git
 sudo usermod -aG docker "$USER" && newgrp docker
 
-git clone <your-repo-url> FeedbackAnalytics_LLM
-cd FeedbackAnalytics_LLM
+git clone <your-repo-url> feedbackiq
+cd feedbackiq
 ./scripts/deploy/sync_artifacts.sh pull gs://feedbackiq-artifacts
 
 cat > .env <<'EOF'
@@ -147,7 +147,7 @@ You should see the Streamlit dashboard load. Try the chatbot page to confirm the
 
 ```bash
 gcloud compute ssh feedbackiq
-cd FeedbackAnalytics_LLM
+cd feedbackiq
 git pull
 docker compose up -d --build
 ```
