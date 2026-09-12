@@ -8,6 +8,7 @@ Protects the hallucination-prevention behaviour measured in the dissertation:
   * out-of-scope questions are refused before retrieval
   * answers list exactly the reviews they were built from
   * rate-limit errors are retried; other errors are not
+  * internal failures raise EngineError/RetrievalError; refusals do not
 
 Several cases are ported from evaluate/verify_rag_fixes.py, which needs a live Groq key
 and the FAISS index. Here the vector store and the LLM are small fakes.
@@ -20,6 +21,7 @@ from langchain_core.documents import Document
 from langchain_core.runnables import RunnableLambda
 
 import feedbackiq.rag.pipeline as pipeline
+from feedbackiq.engine.errors import EngineError, RetrievalError
 
 NO_EVIDENCE_PREFIX = "I couldn't find enough relevant customer reviews"
 PROMPT_REFUSAL_RULE = "The retrieved reviews do not contain enough evidence to answer this question."
@@ -233,22 +235,39 @@ def test_platform_named_in_the_question_filters_retrieval(rag):
     assert all(call["k"] == 50 for call in relevance_calls)  # wider candidate pool when filtering
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "Known issue: rag.pipeline.ask() returns internal exception text to the user "
-        "as 'An error occurred: ...' (HTTP 200). Planned fix: Milestone 3."
-    ),
-)
-def test_internal_errors_are_not_shown_to_the_user(rag, monkeypatch):
+def test_internal_errors_are_raised_not_returned_as_an_answer(rag, monkeypatch):
+    """Fixed in Milestone 3 (was a strict xfail): ask() used to return
+    "An error occurred: <exception>" with HTTP 200, which is indistinguishable from a
+    real answer to the user and to monitoring."""
     def broken_store():
         raise RuntimeError("FAISS index unreadable at /internal/path")
 
     monkeypatch.setattr(pipeline, "_get_vectorstore", broken_store)
 
-    result = pipeline.ask("What are the top complaints?", chat_history=[])
+    with pytest.raises(EngineError) as raised:
+        pipeline.ask("What are the top complaints?", chat_history=[])
 
-    assert "/internal/path" not in result["answer"]
+    assert "/internal/path" not in str(raised.value)
+
+
+def test_a_missing_index_raises_a_retrieval_error(rag, monkeypatch):
+    def missing_index():
+        raise FileNotFoundError("data/embeddings/langchain_index")
+
+    monkeypatch.setattr(pipeline, "_get_vectorstore", missing_index)
+
+    with pytest.raises(RetrievalError):
+        pipeline.ask("What are the top complaints?", chat_history=[])
+
+
+def test_refusals_are_still_returned_not_raised(rag):
+    """A refusal is a correct outcome, so it must not become an exception."""
+    rag.store = FakeVectorStore([(review("weak", "Unrelated review."), 0.10)])
+
+    result = pipeline.ask("What do customers say about crypto payments?", chat_history=[])
+
+    assert result["grounded"] is False
+    assert result["answer"].startswith(NO_EVIDENCE_PREFIX)
 
 
 # Retries
