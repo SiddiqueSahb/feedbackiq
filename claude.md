@@ -13,8 +13,10 @@ B2B SaaS product **incrementally**. The audit and milestone plan live in
 3. **Small, reviewable changes.** Logical commits, not one large unexplained one.
    Never force-push; never rewrite pushed history.
 4. **Run the tests after every meaningful change:** `pytest` must stay at
-   **104 passed, 4 xfailed** or better. Never weaken or delete a test to get green,
-   and never flip a strict `xfail` without documenting why the behaviour changed.
+   **244 passed, 2 xfailed** or better (it was 104 passed, 4 xfailed before Milestone 3).
+   Never weaken or delete a test to get green, and never flip a strict `xfail` without
+   documenting why the behaviour changed. The database suite is separate and needs a real
+   PostgreSQL: `pytest tests/integration` (42 tests), not selected by a bare `pytest`.
 5. **Don't touch dissertation research artefacts** without asking: `notebooks/`,
    `evaluate/`, `scripts/`, `data/`, `models/`, `mlruns/`, `RESULTS.md`. Their results
    must stay reproducible. Import paths may be updated; methodology may not.
@@ -37,11 +39,15 @@ src/feedbackiq/        the product (installed with `pip install -e .`)
   core/                settings, logging, paths, exceptions
   api/                 FastAPI app, auth dependency, routes, request/response schemas
   services/            orchestration between the API and the ML code
+  engine/              the analytics engine: typed inputs and results, no HTTP, no SQL
+  db/                  models, session, migrations' target, persistence functions, seed
   nlp/                 sentiment, categorisation, embeddings, LLM analysis
   rag/                 retrieval-augmented question answering and its prompts
+migrations/            Alembic environment and versioned migration scripts
 frontend/              Streamlit app (internal tool; talks to the API over HTTP only)
 backend/               build files for the API image (Dockerfile, extra requirements)
 tests/unit, tests/api  the safety net: offline, no models, no network
+tests/integration      database tests against a real PostgreSQL (run explicitly)
 tests/*.py             older manual check scripts, not collected by pytest
 evaluate/, scripts/    dissertation evaluation and offline pipeline
 notebooks/             dissertation notebooks (gitignored; never edited)
@@ -53,10 +59,16 @@ docs/production/       audit and milestone documentation
 ```bash
 pip install -e ".[dev]"      # editable install; no sys.path manipulation anywhere
 pytest                        # the safety net (seconds, offline)
-flake8 src frontend tests/conftest.py tests/unit tests/api --select=E9,F
+flake8 src frontend migrations tests/conftest.py tests/unit tests/api tests/integration --select=E9,F
 uvicorn feedbackiq.api.main:app --reload --port 8000
 streamlit run frontend/app.py
 docker build -f backend/Dockerfile --output type=cacheonly .   # local export is broken; see milestone-01
+
+docker compose up -d postgres          # PostgreSQL 16 on localhost:55432
+alembic upgrade head                   # create/update the schema
+python -m feedbackiq.db.seed           # dev organisation + the 24 default categories
+pytest tests/integration               # needs the database above; fails (not skips) without it
+alembic revision --autogenerate --rev-id 000N -m "what changed"
 ```
 
 ## Things to know
@@ -66,5 +78,10 @@ docker build -f backend/Dockerfile --output type=cacheonly .   # local export is
 - The LLM (Groq) is external: no test may depend on it, and no test may need network
   access or model downloads.
 - `logs/` is not used by the application any more; logging goes to stdout.
-- Four known defects are recorded as strict `xfail` tests; see
-  `docs/production/milestone-01.md` before "fixing" one.
+- Two known defects remain as strict `xfail` tests (both API-level); see
+  `docs/production/milestone-01.md` before "fixing" one. The other two were fixed in
+  Milestone 3 (the sentiment gate, and RAG errors raising instead of being returned).
+- **The engine must never import SQLAlchemy, psycopg, Alembic or `feedbackiq.db`.** The
+  engine returns typed results; `db/persistence.py` stores them. Enforced by
+  `tests/integration/test_engine_db_boundary.py`.
+- Nothing in the API reads or writes the database yet — that is a later milestone.
