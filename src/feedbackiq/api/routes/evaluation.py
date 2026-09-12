@@ -1,27 +1,14 @@
 import asyncio
-import os
-import sys
-
-sys.path.insert(
-    0,
-    os.path.dirname(
-        os.path.dirname(
-            os.path.dirname(
-                os.path.dirname(os.path.abspath(__file__))
-            )
-        )
-    ),
-)
 
 from fastapi import APIRouter, HTTPException
 
-from backend.services.evaluation_service import (
+from feedbackiq.services.evaluation_service import (
     get_rag_evaluation,
     get_retrieval_evaluation,
     get_sentiment_evaluation,
 )
 
-from logger import get_logger
+from feedbackiq.core.logging import get_logger
 
 router = APIRouter(tags=["Evaluation"])
 
@@ -75,8 +62,8 @@ async def retrieval_evaluation() -> dict:
     "/rag",
     summary="RAG / RAGAS evaluation",
     description="Faithfulness, answer relevancy and other RAG pipeline metrics "
-                "from scripts/evaluate_rag.py. Returns available=false if that "
-                "script hasn't been run yet.",
+                "from evaluate/evaluate_llm_vs_rag.py. Returns available=false if "
+                "that script hasn't been run yet.",
 )
 async def rag_evaluation() -> dict:
 

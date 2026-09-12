@@ -4,18 +4,9 @@ Semantic search service — thin wrapper around nlp/embedding_service.py.
 
 from __future__ import annotations
 
-import os
-import sys
 
-sys.path.insert(
-    0,
-    os.path.dirname(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    ),
-)
-
-from nlp.embedding_service import semantic_search
-from logger import get_logger
+from feedbackiq.nlp.embedding_service import semantic_search
+from feedbackiq.core.logging import get_logger
 
 log = get_logger("service.search")
 

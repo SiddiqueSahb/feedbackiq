@@ -9,14 +9,13 @@ if API_KEY is unset or still the dev default.
 
 from __future__ import annotations
 
-import os
 import secrets
 
 from fastapi import HTTPException, Security, status
 from fastapi.security import APIKeyHeader
 
-from config import settings
-from logger import get_logger
+from feedbackiq.core.config import settings
+from feedbackiq.core.logging import get_logger
 
 log = get_logger("api.deps")
 
@@ -25,7 +24,7 @@ API_KEY_HEADER = "x-api-key"
 # Dev-only default; never use in production.
 DEV_DEFAULT_KEY = "dev-key-feedbackiq"
 
-IS_PRODUCTION = os.getenv("ENVIRONMENT", "development").strip().lower() == "production"
+IS_PRODUCTION = settings.is_production
 
 if IS_PRODUCTION and settings.API_KEY in ("", DEV_DEFAULT_KEY):
     raise RuntimeError(

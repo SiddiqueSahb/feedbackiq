@@ -4,23 +4,12 @@ answered from retrieved reviews rather than the model's own knowledge.
 """
 
 import asyncio
-import os
-import sys
-
-sys.path.insert(
-    0,
-    os.path.dirname(
-        os.path.dirname(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        )
-    ),
-)
 
 from fastapi import APIRouter, HTTPException
 
-from backend.models.schemas import ChatRequest, ChatResponse
-from backend.services.rag_service import ask_question
-from logger import get_logger
+from feedbackiq.api.schemas import ChatRequest, ChatResponse
+from feedbackiq.services.rag_service import ask_question
+from feedbackiq.core.logging import get_logger
 
 router = APIRouter(tags=["RAG"])
 

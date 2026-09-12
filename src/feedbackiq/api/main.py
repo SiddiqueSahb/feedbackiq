@@ -2,32 +2,28 @@
 FeedbackIQ backend — FastAPI application entrypoint.
 
 Run locally:
-    uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+    uvicorn feedbackiq.api.main:app --reload --host 0.0.0.0 --port 8000
 
-Routers wrap the existing nlp/, rag/, evaluate/ modules unchanged. Models
+Routers wrap the feedbackiq.nlp and feedbackiq.rag modules unchanged. Models
 and the FAISS index load lazily on first request, not at startup.
 """
 
 from __future__ import annotations
 
 import asyncio
-import os
-import sys
 import time
 from contextlib import asynccontextmanager
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from backend.api.deps import require_api_key
-from backend.api.routes import analytics, evaluation, rag, search, sentiment
-from backend.models.schemas import HealthResponse
-from backend.services.analytics_service import warm_cache
-from config import settings
-from logger import get_logger
+from feedbackiq.api.deps import require_api_key
+from feedbackiq.api.routes import analytics, evaluation, rag, search, sentiment
+from feedbackiq.api.schemas import HealthResponse
+from feedbackiq.services.analytics_service import warm_cache
+from feedbackiq.core.config import settings
+from feedbackiq.core.logging import get_logger
 
 log = get_logger("api.main")
 
@@ -130,13 +126,13 @@ async def root() -> dict:
 async def health() -> HealthResponse:
     """Reports whether data/index/LLM are actually available, not just that the process is alive."""
 
-    data_loaded = os.path.exists(settings.DATA_PATH)
-    index_ready = os.path.exists(settings.INDEX_PATH) or os.path.exists(settings.LANGCHAIN_INDEX_PATH)
+    data_loaded = settings.data_file.exists()
+    index_ready = settings.index_file.exists() or settings.langchain_index_dir.exists()
     llm_ready = bool(settings.GROQ_API_KEY)
 
     return HealthResponse(
         status="ok",
-        environment=os.getenv("ENVIRONMENT", "development"),
+        environment=settings.ENVIRONMENT,
         data_loaded=data_loaded,
         index_ready=index_ready,
         llm_ready=llm_ready,

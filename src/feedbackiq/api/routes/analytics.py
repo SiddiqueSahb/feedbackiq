@@ -1,22 +1,9 @@
 import asyncio
-import os
-import sys
 from typing import Literal
-
-sys.path.insert(
-    0,
-    os.path.dirname(
-        os.path.dirname(
-            os.path.dirname(
-                os.path.dirname(os.path.abspath(__file__))
-            )
-        )
-    ),
-)
 
 from fastapi import APIRouter, HTTPException, Query
 
-from backend.services.analytics_service import (
+from feedbackiq.services.analytics_service import (
     get_platform_list,
     get_rating_distribution,
     get_sentiment_by_platform,
@@ -25,7 +12,7 @@ from backend.services.analytics_service import (
     get_trend_data,
 )
 
-from logger import get_logger
+from feedbackiq.core.logging import get_logger
 
 router = APIRouter(tags=["Analytics"])
 

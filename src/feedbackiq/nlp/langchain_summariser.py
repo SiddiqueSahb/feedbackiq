@@ -1,19 +1,13 @@
 from __future__ import annotations
 
 import json
-import os
-import sys
 
-sys.path.append(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)
-
-from config import settings
+from feedbackiq.core.config import settings
 
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_groq import ChatGroq
-from logger import get_logger
+from feedbackiq.core.logging import get_logger
 
 log = get_logger("nlp.summariser")
 

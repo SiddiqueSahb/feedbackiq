@@ -4,23 +4,12 @@ using the FAISS index built by scripts/build_index.py.
 """
 
 import asyncio
-import os
-import sys
-
-sys.path.insert(
-    0,
-    os.path.dirname(
-        os.path.dirname(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        )
-    ),
-)
 
 from fastapi import APIRouter, HTTPException
 
-from backend.models.schemas import SearchRequest, SearchResult
-from backend.services.search_service import search_reviews
-from logger import get_logger
+from feedbackiq.api.schemas import SearchRequest, SearchResult
+from feedbackiq.services.search_service import search_reviews
+from feedbackiq.core.logging import get_logger
 
 router = APIRouter(tags=["Search"])
 

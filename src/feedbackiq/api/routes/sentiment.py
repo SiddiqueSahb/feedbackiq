@@ -11,34 +11,23 @@ Sentiment analysis endpoints.
 """
 
 import asyncio
-import os
-import sys
-
-sys.path.insert(
-    0,
-    os.path.dirname(
-        os.path.dirname(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        )
-    ),
-)
 
 from fastapi import APIRouter, HTTPException
 
-from backend.models.schemas import (
+from feedbackiq.api.schemas import (
     AnalyseResponse,
     BatchPredictRequest,
     ReviewRequest,
     SentimentResult,
     TextRequest,
 )
-from backend.services.sentiment_service import (
+from feedbackiq.services.sentiment_service import (
     analyse_review,
     batch_predict,
     compare_models,
     predict_only,
 )
-from logger import get_logger
+from feedbackiq.core.logging import get_logger
 
 router = APIRouter(tags=["Sentiment"])
 

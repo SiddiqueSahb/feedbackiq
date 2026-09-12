@@ -4,19 +4,8 @@ Customer review analysis service.
 
 from __future__ import annotations
 
-import os
-import sys
 
-sys.path.insert(
-    0,
-    os.path.dirname(
-        os.path.dirname(
-            os.path.dirname(os.path.abspath(__file__))
-        )
-    ),
-)
-
-from nlp.sentiment import (
+from feedbackiq.nlp.sentiment import (
     compare_all,
     get_finetuned,
     get_logistic_regression,
@@ -24,10 +13,10 @@ from nlp.sentiment import (
     get_roberta,
     get_vader,
 )
-from nlp.categoriser import categorise
-from nlp.embedding_service import semantic_search
-from nlp.summariser import analyse_review_with_llm
-from logger import get_logger
+from feedbackiq.nlp.categoriser import categorise
+from feedbackiq.nlp.embedding_service import semantic_search
+from feedbackiq.nlp.summariser import analyse_review_with_llm
+from feedbackiq.core.logging import get_logger
 
 log = get_logger("service.sentiment")
 

@@ -75,3 +75,6 @@ notebooks/
 
 # pytest
 .pytest_cache/
+
+# setuptools build metadata from `pip install -e .`
+*.egg-info/

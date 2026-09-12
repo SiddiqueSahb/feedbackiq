@@ -113,7 +113,7 @@ def is_complaint_question_llm(question: str, llm: Optional[Any] = None) -> bool:
     """LLM-based out-of-scope guard; falls back to is_complaint_question()
     if no LLM is configured or the call fails. Not wired into ask() by default."""
     # local import: pipeline.py imports this module at load time
-    from rag.pipeline import _get_llm, _invoke_with_retry
+    from feedbackiq.rag.pipeline import _get_llm, _invoke_with_retry
 
     llm = llm or _get_llm()
     if llm is None:

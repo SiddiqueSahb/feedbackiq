@@ -11,21 +11,18 @@ Saved to: models/classical/
 from __future__ import annotations
 
 import os
-import sys
 import pickle
 import re
 from typing import Any
 
 # Make project root importable
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from logger import get_logger
+from feedbackiq.core.config import settings
+from feedbackiq.core.logging import get_logger
 log = get_logger("nlp.classical")
 
-# Model paths, anchored to project root -- a bare relative path silently
-# breaks if launched from elsewhere (predictions quietly return "unknown")
-_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MODEL_DIR = os.path.join(_PROJECT_ROOT, "models", "classical")
+# Resolved against the project root by core/config.py, so a different working
+# directory cannot turn predictions into a silent "unknown".
+MODEL_DIR = str(settings.classical_model_dir)
 LR_PATH   = os.path.join(MODEL_DIR, "logistic_regression.pkl")
 NB_PATH   = os.path.join(MODEL_DIR, "naive_bayes.pkl")
 VEC_PATH  = os.path.join(MODEL_DIR, "tfidf_vectorizer.pkl")

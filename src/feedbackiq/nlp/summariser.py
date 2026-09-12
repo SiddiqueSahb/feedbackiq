@@ -2,23 +2,17 @@ from __future__ import annotations
 
 import re
 import json
-import os
-import sys
-
-sys.path.append(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)
 
 from functools import lru_cache
 from typing import Literal
 
 from pydantic import BaseModel, Field, ValidationError
 
-from config import settings
+from feedbackiq.core.config import settings
 
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_groq import ChatGroq
-from logger import get_logger
+from feedbackiq.core.logging import get_logger
 
 log = get_logger("nlp.summariser")
 
@@ -33,8 +27,9 @@ EMPTY_ANALYSIS = {
 }
 
 # Min relevance score for a "similar review" to enter the prompt as evidence;
-# same basis as rag.pipeline.SIMILARITY_THRESHOLD. See Analyse_LLM_Audit#1.
-ANALYSE_SIMILARITY_THRESHOLD = 0.35
+# same basis as feedbackiq.rag.pipeline.SIMILARITY_THRESHOLD; covered by
+# tests/unit/test_llm_output_recovery.py.
+ANALYSE_SIMILARITY_THRESHOLD = settings.ANALYSE_SIMILARITY_THRESHOLD
 
 NO_SIMILAR_REVIEWS_MARKER = "(No sufficiently similar historical reviews found.)"
 
@@ -189,7 +184,7 @@ def _get_chain():
         api_key=settings.GROQ_API_KEY,
         model=settings.GROQ_MODEL,
         temperature=settings.LLM_TEMPERATURE,
-        timeout=30,
+        timeout=settings.LLM_TIMEOUT,
     )
 
     # Structured output (tool-calling), not prompt+JsonOutputParser -- the latter

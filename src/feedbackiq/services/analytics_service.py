@@ -7,7 +7,6 @@ from __future__ import annotations
 import json
 import os
 import re
-import sys
 import threading
 from collections import Counter
 from functools import lru_cache
@@ -15,16 +14,8 @@ from functools import lru_cache
 import pandas as pd
 import spacy
 
-sys.path.append(
-    os.path.dirname(
-        os.path.dirname(
-            os.path.dirname(os.path.abspath(__file__))
-        )
-    )
-)
-
-from config import settings
-from logger import get_logger
+from feedbackiq.core.config import settings
+from feedbackiq.core.logging import get_logger
 
 log = get_logger("service.analytics")
 
@@ -32,7 +23,7 @@ _nlp_lock = threading.Lock()
 _df_lock = threading.Lock()
 
 # Precomputed by scripts/precompute_keywords.py — see get_top_keywords().
-KEYWORDS_FILE = os.path.join("data", "results", "keywords", "top_keywords.json")
+KEYWORDS_FILE = str(settings.keywords_file)
 
 # Fallback size when the precomputed file is absent; rankings are stable
 # well below the full corpus. Results are labelled "sample" either way.
@@ -120,12 +111,12 @@ def _get_nlp():
 def _load_df_uncached() -> pd.DataFrame:
     """Load the processed dataset once."""
 
-    if not os.path.exists(settings.DATA_PATH):
-        log.warning("Dataset not found: %s", settings.DATA_PATH)
+    if not settings.data_file.exists():
+        log.warning("Dataset not found: %s", settings.data_file)
         return pd.DataFrame()
 
     log.info("Loading dataset...")
-    return pd.read_parquet(settings.DATA_PATH)
+    return pd.read_parquet(settings.data_file)
 
 
 def _load_df() -> pd.DataFrame:

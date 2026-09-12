@@ -5,24 +5,15 @@ from __future__ import annotations
 import ast
 import json
 import os
-import sys
 
 import pandas as pd
 
-sys.path.append(
-    os.path.dirname(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    )
-)
-
-from logger import get_logger
+from feedbackiq.core.config import settings
+from feedbackiq.core.logging import get_logger
 
 log = get_logger("service.evaluation")
 
-_PROJECT_ROOT = os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)
-RESULTS_DIR = os.path.join(_PROJECT_ROOT, "data", "results")
+RESULTS_DIR = str(settings.results_dir)
 
 # display names as used in the result filenames from evaluate_models.py
 SENTIMENT_MODELS = [

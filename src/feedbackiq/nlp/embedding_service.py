@@ -4,8 +4,6 @@ Embedding generation and FAISS semantic search service.
 
 from __future__ import annotations
 
-import os
-import sys
 import threading
 from functools import lru_cache
 from typing import Optional
@@ -13,12 +11,8 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
-sys.path.append(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)
-
-from config import settings
-from logger import get_logger
+from feedbackiq.core.config import settings
+from feedbackiq.core.logging import get_logger
 
 log = get_logger("nlp.embedding_service")
 
@@ -37,21 +31,21 @@ def _load_resources_uncached():
 
     model = SentenceTransformer(settings.EMBEDDING_MODEL)
 
-    if not os.path.exists(settings.INDEX_PATH):
+    if not settings.index_file.exists():
         raise FileNotFoundError(
-            f"FAISS index not found at {settings.INDEX_PATH}\n"
+            f"FAISS index not found at {settings.index_file}\n"
             "Run: python scripts/build_index.py"
         )
 
-    index = faiss.read_index(settings.INDEX_PATH)
+    index = faiss.read_index(str(settings.index_file))
     log.info("FAISS index loaded | vectors=%d | dim=%d", index.ntotal, index.d)
 
-    if not os.path.exists(settings.DATA_PATH):
+    if not settings.data_file.exists():
         raise FileNotFoundError(
-            f"Dataset not found at {settings.DATA_PATH}"
+            f"Dataset not found at {settings.data_file}"
         )
 
-    df = pd.read_parquet(settings.DATA_PATH)
+    df = pd.read_parquet(settings.data_file)
     log.info("Review dataframe loaded | rows=%d", len(df))
 
     return model, index, df

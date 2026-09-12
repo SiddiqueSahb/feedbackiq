@@ -3,11 +3,11 @@ RAG pipeline: conversational customer complaint exploration.
 
 Business analysts ask questions about complaint patterns; retrieves
 relevant reviews from the FAISS index and generates grounded answers.
-Evaluated via RAGAS in scripts/evaluate_rag.py.
+Evaluated via RAGAS in evaluate/evaluate_llm_vs_rag.py.
 """
 
 from __future__ import annotations
-import sys, os, re, time
+import os, re, time
 
 # Must be set before torch/faiss import — both bundle OpenMP runtimes and
 # loading both causes a hard segfault on macOS during parallel work.
@@ -15,14 +15,12 @@ os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 os.environ.setdefault("OMP_NUM_THREADS", "1")
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 import threading
 from typing import Optional, Any
-from logger import get_logger
+from feedbackiq.core.logging import get_logger
 from functools import lru_cache
-from config import settings
-from rag.prompts import (
+from feedbackiq.core.config import settings
+from feedbackiq.rag.prompts import (
     RAG_PROMPT,
     CONDENSE_QUESTION_PROMPT,
     is_complaint_question,

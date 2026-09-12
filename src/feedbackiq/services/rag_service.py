@@ -4,18 +4,9 @@ RAG chat service — thin wrapper around rag/pipeline.py.
 
 from __future__ import annotations
 
-import os
-import sys
 
-sys.path.insert(
-    0,
-    os.path.dirname(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    ),
-)
-
-from rag.pipeline import ask
-from logger import get_logger
+from feedbackiq.rag.pipeline import ask
+from feedbackiq.core.logging import get_logger
 
 log = get_logger("service.rag")
 

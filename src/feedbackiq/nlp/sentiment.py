@@ -8,14 +8,15 @@ Five sentiment classifiers for dissertation comparison:
 """
 
 from __future__ import annotations
-import sys,os
+import os
 import threading
 import torch
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from typing import Optional
 from functools import lru_cache
-from config import settings
+from feedbackiq.core.config import settings
+from feedbackiq.core.logging import get_logger
+
+log = get_logger("nlp.sentiment")
 
 
 def _thread_safe_cache(build_fn):
@@ -98,10 +99,11 @@ class FineTunedSentiment:
         """Fine-tuned DistilBERT classifier; falls back to RoBERTa if the model isn't found."""
 
         def __init__(self,model_path: Optional[str] = None) -> None:
-            model_path = model_path or settings.MODEL_PATH
+            model_path = model_path or str(settings.model_dir)
             if not os.path.exists(model_path):
-                print(f" Fine-tuned model not found at {model_path}. "
-                  f"Run fine-tuning on Colab first. Falling back to RoBERTa.")
+                log.warning(
+                    "Fine-tuned model not found at %s; falling back to RoBERTa.", model_path
+                )
                 self._fallback: Optional[RobertaSentiment] = RobertaSentiment()
                 self._loaded   = False
                 return
@@ -123,7 +125,9 @@ class FineTunedSentiment:
                 result["model"] = "roberta_fallback"
                 return result
 
-            inputs = self.tokenizer(str(text), return_tensors="pt", truncation=True, max_length=128)
+            inputs = self.tokenizer(
+                str(text), return_tensors="pt", truncation=True, max_length=settings.MAX_SEQ_LENGTH
+            )
 
             with torch.no_grad():
 
@@ -156,12 +160,12 @@ get_finetuned = _thread_safe_cache(FineTunedSentiment)
 
 
 def _build_logistic_regression():
-    from nlp.classical_models import LogisticRegressionSentiment
+    from feedbackiq.nlp.classical_models import LogisticRegressionSentiment
     return LogisticRegressionSentiment()
 
 
 def _build_naive_bayes():
-    from nlp.classical_models import NaiveBayesSentiment
+    from feedbackiq.nlp.classical_models import NaiveBayesSentiment
     return NaiveBayesSentiment()
 
 

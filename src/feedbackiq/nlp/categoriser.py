@@ -5,19 +5,20 @@ shortlist, then NLI reranks it (see categorise()).
 Categories come from discover_categories.py's single consolidated taxonomy
 (data/processed/complaint_categories_all_<sentiment>.json). Concatenating
 per-platform files instead caused cross-platform leakage (e.g. an airline
-category showing up for an Amazon review) — see docs/methodology_review.md.
+category showing up for an Amazon review) — see the dissertation's methodology chapter.
 """
 
 from __future__ import annotations
-import sys, os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
+import os
 import json
 import threading
 import numpy as np
 from functools import lru_cache
 
-from config import settings
+from feedbackiq.core.config import settings
+from feedbackiq.core.logging import get_logger
+
+log = get_logger("nlp.categoriser")
 
 _embedder_lock = threading.Lock()
 _classifier_lock = threading.Lock()
@@ -35,8 +36,7 @@ _STATIC_FALLBACK: list[dict] = [
     {"category": "Refund & Returns Issues", "description": "Difficulty obtaining a refund, exchange, or processing a return.", "exemplars": ["refund denied", "return rejected", "no exchange offered"]},
 ]
 
-_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_PROCESSED_DIR = os.path.join(_PROJECT_ROOT, "data", "processed")
+_PROCESSED_DIR = str(settings.taxonomy_dir)
 
 
 def _taxonomy_path(sentiment: str = "negative") -> str:
@@ -70,12 +70,14 @@ def _load_categories(sentiment: str = "negative") -> list[dict]:
                     "description": str(c.get("description") or c["category"]),
                     "exemplars": [str(e) for e in c.get("exemplars", [])],
                 })
-        print(f"[categoriser] Loaded {len(cats)} categories from {os.path.basename(path)}")
+        log.info("Loaded %d categories from %s", len(cats), os.path.basename(path))
         return cats
 
-    print(f"[categoriser] No consolidated taxonomy found at {os.path.basename(path)}")
-    print(f"[categoriser] Run: python scripts/discover_categories.py --sentiment {sentiment}")
-    print(f"[categoriser] Using {len(_STATIC_FALLBACK)} static fallback categories")
+    log.warning(
+        "No consolidated taxonomy at %s; using %d static fallback categories. "
+        "Run: python scripts/discover_categories.py --sentiment %s",
+        os.path.basename(path), len(_STATIC_FALLBACK), sentiment,
+    )
     return list(_STATIC_FALLBACK)
 
 
@@ -158,7 +160,7 @@ def categorise(
 
     shortlist_k = shortlist_k or settings.CATEGORY_SHORTLIST_K
     model_name = model_name or settings.ZEROSHOT_MODEL
-    text = str(text)[:400]
+    text = str(text)[: settings.CATEGORY_MAX_CHARS]
 
     try:
         cat_key = _categories_key(categories)
