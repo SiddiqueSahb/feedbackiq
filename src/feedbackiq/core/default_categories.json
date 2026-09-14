@@ -1,13 +1,14 @@
 {
   "taxonomy_id": "complaint-24",
-  "taxonomy_version": "1.0.0",
+  "taxonomy_version": "1.1.0",
   "category_count": 24,
   "generated_on": "2026-08-08",
   "generated_by": "scripts/discover_categories.py --sentiment negative (BERTopic per platform, then cross-platform merge)",
   "source_file": "data/processed/complaint_categories_all_negative.json",
-  "notes": "Canonical production taxonomy. Shipped with the package so that a fresh clone, CI and the container image all categorise and seed against the same 24 categories. The generating research data is not required at runtime.",
+  "notes": "Canonical production taxonomy. Shipped with the package so that a fresh clone, CI and the container image all categorise and seed against the same 24 categories. The generating research data is not required at runtime. 'key' is the stable identity: it was derived from the category name once (taxonomy 1.1.0) and must never be regenerated when a display name changes - see docs/production/taxonomy-product-review.md.",
   "categories": [
     {
+      "key": "service_and_wait_time_delays",
       "category": "Service and Wait Time Delays",
       "description": "Customers experience unacceptable wait times or poor service from staff, impacting their overall experience.",
       "exemplars": [
@@ -17,6 +18,7 @@
       ]
     },
     {
+      "key": "salon_service_failures",
       "category": "Salon Service Failures",
       "description": "The salon fails to provide satisfactory services, resulting in customer dissatisfaction and frustration.",
       "exemplars": [
@@ -26,6 +28,7 @@
       ]
     },
     {
+      "key": "product_taste_and_aroma_failures",
       "category": "Product Taste and Aroma Failures",
       "description": "The product has an unpleasant or unappealing taste or smell, affecting the overall quality and customer satisfaction.",
       "exemplars": [
@@ -35,6 +38,7 @@
       ]
     },
     {
+      "key": "visual_quality_and_performance_failures",
       "category": "Visual Quality and Performance Failures",
       "description": "The product's visual quality is poor, and it fails to perform as expected.",
       "exemplars": [
@@ -44,6 +48,7 @@
       ]
     },
     {
+      "key": "hair_quality_and_performance_failures",
       "category": "Hair Quality and Performance Failures",
       "description": "The product fails to meet expectations for human hair quality, texture, or performance.",
       "exemplars": [
@@ -53,6 +58,7 @@
       ]
     },
     {
+      "key": "travel_disruption_issues",
       "category": "Travel Disruption Issues",
       "description": "Travel plans are disrupted due to flight cancellations, delays, or lost luggage.",
       "exemplars": [
@@ -62,6 +68,7 @@
       ]
     },
     {
+      "key": "product_performance_failures",
       "category": "Product Performance Failures",
       "description": "The product does not meet expectations, fails to deliver as promised, or has a poor overall quality.",
       "exemplars": [
@@ -71,6 +78,7 @@
       ]
     },
     {
+      "key": "audio_performance_failures",
       "category": "Audio Performance Failures",
       "description": "The product fails to deliver clear and consistent sound quality, often resulting in poor audio performance.",
       "exemplars": [
@@ -80,6 +88,7 @@
       ]
     },
     {
+      "key": "financial_institution_service_failures",
       "category": "Financial Institution Service Failures",
       "description": "The financial institution fails to provide adequate service, resulting in delays, inconvenience, or unauthorized transactions.",
       "exemplars": [
@@ -89,6 +98,7 @@
       ]
     },
     {
+      "key": "tablet_accessory_quality_failures",
       "category": "Tablet Accessory Quality Failures",
       "description": "The product fails to provide adequate protection, functionality, or durability for a tablet accessory.",
       "exemplars": [
@@ -98,6 +108,7 @@
       ]
     },
     {
+      "key": "product_color_representation_failures",
       "category": "Product Color Representation Failures",
       "description": "The product's actual color does not match the representation shown in advertising or product images.",
       "exemplars": [
@@ -107,6 +118,7 @@
       ]
     },
     {
+      "key": "facial_protection_and_safety_failures",
       "category": "Facial Protection and Safety Failures",
       "description": "The establishment fails to provide adequate facial protection or maintain a safe environment for customers.",
       "exemplars": [
@@ -116,6 +128,7 @@
       ]
     },
     {
+      "key": "home_network_connectivity_issues",
       "category": "Home Network Connectivity Issues",
       "description": "The home network fails to connect, drops connections, or does not function as expected.",
       "exemplars": [
@@ -125,6 +138,7 @@
       ]
     },
     {
+      "key": "product_fit_and_sizing_issues",
       "category": "Product Fit and Sizing Issues",
       "description": "The product does not fit properly, is too small, or has an incorrect size for the intended user.",
       "exemplars": [
@@ -134,6 +148,7 @@
       ]
     },
     {
+      "key": "order_fulfillment_delays",
       "category": "Order Fulfillment Delays",
       "description": "The customer's order is not fulfilled as expected, resulting in missing or incomplete items.",
       "exemplars": [
@@ -143,6 +158,7 @@
       ]
     },
     {
+      "key": "spray_bottle_continuous_spray_dryer_diffuser_fit_dryer",
       "category": "Spray Bottle, Continuous Spray, Dryer Diffuser, Fit Dryer",
       "description": "Complaints related to: spray bottle, spray bottles, continuous spray, does spray, dryer diffuser, fit dryer.",
       "exemplars": [
@@ -152,6 +168,7 @@
       ]
     },
     {
+      "key": "accessory_attachment_and_fastening_failures",
       "category": "Accessory Attachment and Fastening Failures",
       "description": "The product's accessories or fastening mechanisms break or detach prematurely, causing inconvenience or damage.",
       "exemplars": [
@@ -161,6 +178,7 @@
       ]
     },
     {
+      "key": "mounting_and_installation_problems",
       "category": "Mounting and Installation Problems",
       "description": "The product fails to assemble or install correctly, often due to missing parts or incorrect instructions.",
       "exemplars": [
@@ -170,6 +188,7 @@
       ]
     },
     {
+      "key": "gps_device_performance_failures",
       "category": "GPS Device Performance Failures",
       "description": "The GPS device fails to function correctly, loses signal, or provides inaccurate location data.",
       "exemplars": [
@@ -179,6 +198,7 @@
       ]
     },
     {
+      "key": "laptop_cooling_system_failures",
       "category": "Laptop Cooling System Failures",
       "description": "The laptop cooling system fails to provide adequate cooling, resulting in overheating or poor performance.",
       "exemplars": [
@@ -188,6 +208,7 @@
       ]
     },
     {
+      "key": "mirror_performance_failures",
       "category": "Mirror Performance Failures",
       "description": "The mirror fails to function properly, does not provide adequate light, or stops working after a short period of time.",
       "exemplars": [
@@ -197,6 +218,7 @@
       ]
     },
     {
+      "key": "customer_service_apology_failures",
       "category": "Customer Service Apology Failures",
       "description": "The company fails to provide a satisfactory apology or show remorse for a negative experience.",
       "exemplars": [
@@ -206,6 +228,7 @@
       ]
     },
     {
+      "key": "digital_platform_performance_failures",
       "category": "Digital Platform Performance Failures",
       "description": "The digital platform fails to function as expected, resulting in errors or inconsistencies across mobile and web interfaces.",
       "exemplars": [
@@ -215,6 +238,7 @@
       ]
     },
     {
+      "key": "direct_messaging_access_issues",
       "category": "Direct Messaging Access Issues",
       "description": "The customer is unable to send or receive direct messages due to a lack of mutual following or other technical issues.",
       "exemplars": [
@@ -222,6 +246,16 @@
         "won't let me send a dm",
         "can't send direct message"
       ]
+    }
+  ],
+  "changelog": [
+    {
+      "version": "1.0.0",
+      "change": "Packaged the 24 discovered categories as product reference data (Milestone 5A)."
+    },
+    {
+      "version": "1.1.0",
+      "change": "Added stable machine-readable 'key' per category; no names, descriptions or exemplars changed (Milestone 5B)."
     }
   ]
 }

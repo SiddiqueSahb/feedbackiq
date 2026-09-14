@@ -91,9 +91,23 @@ def test_every_category_carries_what_the_categoriser_needs():
 
 def test_the_taxonomy_carries_no_research_only_fields():
     """Trimmed to what the product uses; `count`, `keywords`, `platforms`,
-    `source_labels` and `source_topic_ids` stay in the dissertation's own output."""
+    `source_labels` and `source_topic_ids` stay in the dissertation's own output.
+
+    `key` joined this set in taxonomy 1.1.0 (Milestone 5B): it is the stable identity, and
+    the only field added since the file was first packaged."""
     for entry in load_default_taxonomy():
-        assert set(entry) == {"category", "description", "exemplars"}
+        assert set(entry) == {"key", "category", "description", "exemplars"}
+
+
+def test_every_category_has_a_stable_machine_readable_key():
+    import re
+
+    entries = load_default_taxonomy()
+    keys = [entry["key"] for entry in entries]
+
+    assert len(set(keys)) == len(entries) == EXPECTED_CATEGORIES
+    # lower_snake_case, so a key is safe in a URL, a column value and a JSON field.
+    assert all(re.fullmatch(r"[a-z0-9_]{3,64}", key) for key in keys)
 
 
 # ---------------------------------------------------------------- versioning

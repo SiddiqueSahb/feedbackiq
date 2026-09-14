@@ -210,9 +210,36 @@ def test_categories_can_be_built_from_the_taxonomy_json_shape():
     categories = categories_from_dicts(rows)
 
     assert len(categories) == 1
+    # No "key" in these rows, so the name is the fallback identity (see below for the
+    # taxonomy 1.1.0 shape, where the stable key takes over).
     assert categories[0].id == "Service Delays"
     assert categories[0].name == "Service Delays"
     assert categories[0].exemplars == ("long wait", "slow service")
+
+
+def test_a_stable_key_becomes_the_identity_and_the_name_stays_a_label():
+    """Taxonomy 1.1.0 onward: `key` identifies the category, `name` is what a customer
+    reads. Renaming must not change which category a stored result refers to."""
+    before = categories_from_dicts(
+        [{"key": "delivery", "category": "Delivery Issues", "description": "Arrived late."}]
+    )
+    after = categories_from_dicts(
+        [{"key": "delivery", "category": "Shipping & Delivery", "description": "Arrived late."}]
+    )
+
+    assert before[0].id == after[0].id == "delivery"
+    assert (before[0].name, after[0].name) == ("Delivery Issues", "Shipping & Delivery")
+
+
+def test_the_canonical_taxonomy_supplies_a_key_for_every_category():
+    from feedbackiq.core.taxonomy import load_default_taxonomy
+
+    categories = categories_from_dicts(load_default_taxonomy())
+
+    assert len(categories) == 24
+    # Identities are keys, not display names: lower_snake_case and unique.
+    assert all(category.id.islower() and " " not in category.id for category in categories)
+    assert len({category.id for category in categories}) == 24
 
 
 def test_a_category_without_a_description_falls_back_to_its_name():

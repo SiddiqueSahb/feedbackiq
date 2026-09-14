@@ -98,25 +98,39 @@ def _ensure_data_source(session: Session, organisation: Organisation) -> tuple[D
 
 
 def _ensure_default_categories(session: Session) -> int:
-    """Insert any of the canonical default categories that are not there yet."""
+    """
+    Insert any of the canonical default categories that are not there yet.
+
+    Matched on `key`, not on `name`: the key is the stable identity, so a category whose
+    display name was reworded is recognised as the same category instead of being seeded a
+    second time. The name is updated in place when it differs.
+    """
     log.info("Seeding the canonical taxonomy, version %s", taxonomy_version())
 
-    existing_names = set(
-        session.scalars(
-            select(Category.name).where(Category.organisation_id.is_(None))
+    existing = {
+        category.key: category
+        for category in session.scalars(
+            select(Category).where(Category.organisation_id.is_(None))
         ).all()
-    )
+    }
 
     created = 0
     for entry in default_categories():
         # The taxonomy file calls it "category"; the column is "name".
+        key = entry["key"]
         name = entry["category"]
-        if name in existing_names:
+
+        current = existing.get(key)
+        if current is not None:
+            if current.name != name:
+                log.info("Category %s renamed: %r -> %r", key, current.name, name)
+                current.name = name
             continue
 
         session.add(
             Category(
                 organisation_id=None,        # global default, shared by every organisation
+                key=key,
                 name=name,
                 description=entry["description"],
                 exemplars=list(entry.get("exemplars", ())),

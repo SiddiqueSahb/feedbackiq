@@ -185,15 +185,38 @@ def test_feedback_without_an_external_id_is_never_a_duplicate(session, organisat
 
 
 def test_a_default_category_name_is_unique_across_the_defaults(session):
+    # Distinct keys on purpose, so the *name* constraint is what fails. With the same key
+    # this test would pass for the wrong reason.
     session.add_all(
         [
-            Category(organisation_id=None, name="Billing", description="Charged wrongly."),
-            Category(organisation_id=None, name="Billing", description="A duplicate."),
+            Category(organisation_id=None, key="billing_one", name="Billing",
+                     description="Charged wrongly."),
+            Category(organisation_id=None, key="billing_two", name="Billing",
+                     description="A duplicate."),
         ]
     )
 
-    with pytest.raises(IntegrityError):
+    with pytest.raises(IntegrityError) as error:
         session.flush()
+
+    assert "uq_categories_default_name" in str(error.value)
+
+
+def test_a_default_category_key_is_unique_across_the_defaults(session):
+    """The stable identity has to be unique, or two categories are the same category."""
+    session.add_all(
+        [
+            Category(organisation_id=None, key="billing", name="Billing",
+                     description="Charged wrongly."),
+            Category(organisation_id=None, key="billing", name="Billing & Charges",
+                     description="A different label, the same key."),
+        ]
+    )
+
+    with pytest.raises(IntegrityError) as error:
+        session.flush()
+
+    assert "uq_categories_default_key" in str(error.value)
 
 
 def test_an_organisation_may_name_its_own_category_after_a_default(session, organisation):
@@ -201,9 +224,11 @@ def test_an_organisation_may_name_its_own_category_after_a_default(session, orga
     is a different category, and the organisation's own row is the one that wins."""
     session.add_all(
         [
-            Category(organisation_id=None, name="Billing", description="The default."),
+            Category(organisation_id=None, key="billing", name="Billing",
+                     description="The default."),
             Category(
                 organisation_id=organisation.id,
+                key="billing",
                 name="Billing",
                 description="How this customer defines billing complaints.",
                 source="custom",
@@ -222,19 +247,24 @@ def test_an_organisation_may_name_its_own_category_after_a_default(session, orga
 def test_an_organisation_cannot_have_two_categories_with_one_name(session, organisation):
     session.add_all(
         [
-            Category(organisation_id=organisation.id, name="Billing", description="One."),
-            Category(organisation_id=organisation.id, name="Billing", description="Two."),
+            Category(organisation_id=organisation.id, key="billing_one", name="Billing",
+                     description="One."),
+            Category(organisation_id=organisation.id, key="billing_two", name="Billing",
+                     description="Two."),
         ]
     )
 
-    with pytest.raises(IntegrityError):
+    with pytest.raises(IntegrityError) as error:
         session.flush()
+
+    assert "uq_categories_organisation_id_name" in str(error.value)
 
 
 def test_an_unknown_category_source_is_rejected(session):
     session.add(
         Category(
             organisation_id=None,
+            key="nonsense",
             name="Nonsense",
             description="A category with an invalid source.",
             source="invented",

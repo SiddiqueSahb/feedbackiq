@@ -197,12 +197,14 @@ class ZeroShotCategoriser:
 
 def categories_from_dicts(rows: Sequence[dict], *, id_prefix: str = "") -> tuple[Category, ...]:
     """
-    Build `Category` objects from the dissertation taxonomy's JSON shape
-    (`{"category": ..., "description": ..., "exemplars": [...]}`).
+    Build `Category` objects from the taxonomy's JSON shape
+    (`{"key": ..., "category": ..., "description": ..., "exemplars": [...]}`).
 
-    Until organisations own their taxonomies, this is how the default set reaches the
-    engine. The name doubles as the identifier, so results remain comparable with the
-    dissertation's stored figures.
+    **`key` is the identity when present** (taxonomy 1.1.0 onward), falling back to the
+    name when it is absent. That separation is the point: `key` is stable and
+    machine-readable, `name` is a customer-facing label that may be reworded without
+    changing which category a stored result refers to. Rows written before keys existed,
+    and a caller passing a hand-built taxonomy, still work off the name.
     """
     categories: list[Category] = []
 
@@ -211,9 +213,11 @@ def categories_from_dicts(rows: Sequence[dict], *, id_prefix: str = "") -> tuple
         if not name:
             continue
 
+        identity = str(row.get("key") or "").strip() or name
+
         categories.append(
             Category(
-                id=f"{id_prefix}{name}",
+                id=f"{id_prefix}{identity}",
                 name=name,
                 description=str(row.get("description") or name),
                 exemplars=tuple(str(e) for e in (row.get("exemplars") or [])),

@@ -194,6 +194,9 @@ def test_an_organisations_own_category_wins_over_the_default_of_the_same_name(
 ):
     own = Category(
         organisation_id=organisation.id,
+        # The same stable key as the global default, in this organisation's own scope: the
+        # key is how the engine's result is resolved, and the organisation's row wins.
+        key="service_and_wait_time_delays",
         name="Service and Wait Time Delays",
         description="How this customer defines slow service.",
         source="custom",

@@ -75,6 +75,45 @@ def test_seeding_twice_changes_nothing(session):
     assert session.scalar(select(func.count()).select_from(Category)) == 24
 
 
+def test_every_seeded_category_has_a_stable_key(session):
+    seed(session)
+    session.commit()
+
+    categories = session.scalars(select(Category)).all()
+
+    assert all(category.key for category in categories)
+    assert {c.key for c in categories} == {e["key"] for e in default_categories()}
+
+
+def test_re_seeding_after_a_rename_updates_the_label_and_keeps_the_identity(session):
+    """
+    What stable keys are for. A category renamed in a future taxonomy version is recognised
+    as the same category: its label is updated in place, and no second row appears - so every
+    analysis result already pointing at it stays correct.
+    """
+    seed(session)
+    session.commit()
+
+    category = session.scalar(
+        select(Category).where(Category.key == "service_and_wait_time_delays")
+    )
+    original_id, original_name = category.id, category.name
+    category.name = "Slow Service"          # pretend an earlier taxonomy called it this
+    session.commit()
+
+    counts = seed(session)
+    session.commit()
+
+    session.expire_all()
+    restored = session.scalar(
+        select(Category).where(Category.key == "service_and_wait_time_delays")
+    )
+    assert counts["categories_created"] == 0        # recognised, not duplicated
+    assert restored.id == original_id               # same row, so results still resolve
+    assert restored.name == original_name           # label brought back into line
+    assert session.scalar(select(func.count()).select_from(Category)) == 24
+
+
 def test_the_seed_does_not_import_the_dissertation_corpus(session):
     """642,692 reviews of research data have no place in a development database - and a
     test suite that loaded them would be unusable."""

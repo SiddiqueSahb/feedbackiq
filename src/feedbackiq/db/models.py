@@ -139,6 +139,11 @@ class ImportBatch(Base):
     __table_args__ = (
         CheckConstraint(_one_of("status", IMPORT_STATUSES), name="status_valid"),
         Index("ix_import_batches_organisation_id_created_at", "organisation_id", "created_at"),
+        # "has this organisation already uploaded this exact file?" - the batch-level half
+        # of duplicate handling. An index, not a unique constraint: re-uploading the same
+        # file is a legitimate thing to do, so the service decides what to do about it
+        # rather than the database refusing the insert.
+        Index("ix_import_batches_organisation_id_source_hash", "organisation_id", "source_hash"),
     )
 
     id: Mapped[uuid.UUID] = uuid_primary_key()
@@ -152,6 +157,9 @@ class ImportBatch(Base):
     # object key - the file itself never goes in the database.
     original_filename: Mapped[str | None] = mapped_column(String(500))
     storage_reference: Mapped[str | None] = mapped_column(String(1000))
+    # SHA-256 of the uploaded bytes, so an identical re-upload is recognisable. NULL for a
+    # batch that did not come from a file.
+    source_hash: Mapped[str | None] = mapped_column(String(64))
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
     row_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     imported_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -252,6 +260,16 @@ class Category(Base):
 
     __tablename__ = "categories"
     __table_args__ = (
+        # The stable identity, unique in the same two scopes as the name: per organisation,
+        # and among the global defaults (where organisation_id IS NULL treats NULLs as
+        # distinct, so a partial index is needed as well).
+        UniqueConstraint("organisation_id", "key", name="uq_categories_organisation_id_key"),
+        Index(
+            "uq_categories_default_key",
+            "key",
+            unique=True,
+            postgresql_where=text("organisation_id IS NULL"),
+        ),
         # Unique per organisation ...
         UniqueConstraint("organisation_id", "name", name="uq_categories_organisation_id_name"),
         # ... and unique among the global defaults, which the constraint above cannot
@@ -271,6 +289,11 @@ class Category(Base):
     organisation_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("organisations.id", ondelete="CASCADE")
     )
+    # The stable identity: lower_snake_case, machine-readable, never regenerated when the
+    # display name changes. Stored results refer to a category by row id, and a caller's
+    # taxonomy refers to it by this key - so "Delivery Issues" can become
+    # "Shipping & Delivery" without orphaning a single result. `name` is the label.
+    key: Mapped[str] = mapped_column(String(64), nullable=False)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     exemplars: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False, default=list)
