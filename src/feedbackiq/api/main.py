@@ -19,7 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from feedbackiq.api.deps import require_api_key
-from feedbackiq.api.routes import analytics, evaluation, rag, search, sentiment
+from feedbackiq.api.routes import analytics, evaluation, imports, rag, search, sentiment
 from feedbackiq.api.schemas import HealthResponse
 from feedbackiq.services.analytics_service import warm_cache
 from feedbackiq.core.config import settings
@@ -115,6 +115,10 @@ app.include_router(search.router, prefix="/api/search", dependencies=protected)
 app.include_router(rag.router, prefix="/api/rag", dependencies=protected)
 app.include_router(analytics.router, prefix="/api/analytics", dependencies=protected)
 app.include_router(evaluation.router, prefix="/api/evaluation", dependencies=protected)
+
+# Ingestion (Milestone 5B). Mounted at /api rather than /api/imports because the router
+# owns both /imports and /jobs - the job is how an import reports its progress.
+app.include_router(imports.router, prefix="/api", dependencies=protected)
 
 
 @app.get("/", tags=["Health"], summary="API root")

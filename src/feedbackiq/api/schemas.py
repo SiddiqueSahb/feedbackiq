@@ -3,6 +3,7 @@ Pydantic request and response models.
 """
 
 import re
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
@@ -238,3 +239,55 @@ class HealthResponse(BaseModel):
 class ErrorResponse(BaseModel):
     detail: str
     code: str | None = None
+
+
+# ---------------------------------------------------------------- ingestion (Milestone 5B)
+
+
+class ImportRowError(BaseModel):
+    """One rejected row, identified by the line number in the customer's own file."""
+
+    row: int
+    field: str
+    message: str
+
+
+class ImportSummary(BaseModel):
+    """An import batch as a customer sees it."""
+
+    import_id: str
+    organisation_id: str
+    filename: str | None = None
+    status: str
+    rows_received: int
+    rows_imported: int
+    rows_rejected: int
+    created_at: datetime | None = None
+    completed_at: datetime | None = None
+
+
+class ImportAccepted(ImportSummary):
+    """The response to an upload: what was stored, what was not, and what happens next."""
+
+    job_id: str | None = None
+    duplicates_in_file: int = 0
+    duplicates_in_database: int = 0
+    # True when this exact file had already been imported: nothing new was created and
+    # `import_id` refers to the original.
+    duplicate_upload: bool = False
+    row_errors: list[ImportRowError] = Field(default_factory=list)
+
+
+class JobSummary(BaseModel):
+    """Progress of background work. `error` is a summary - never internal detail."""
+
+    job_id: str
+    organisation_id: str
+    kind: str
+    status: str
+    attempts: int
+    max_attempts: int
+    created_at: datetime | None = None
+    finished_at: datetime | None = None
+    error: str | None = None
+    result: dict | None = None
