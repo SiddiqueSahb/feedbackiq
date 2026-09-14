@@ -34,10 +34,10 @@ architectural specification.
 3. **Small, reviewable changes.** Logical commits, not one large unexplained one.
    Never force-push; never rewrite pushed history.
 4. **Run the tests after every meaningful change:** `pytest` must stay at
-   **267 passed, 2 xfailed** or better (it was 104 passed, 4 xfailed before Milestone 3).
+   **330 passed, 2 xfailed** or better (it was 104 passed, 4 xfailed before Milestone 3).
    Never weaken or delete a test to get green, and never flip a strict `xfail` without
    documenting why the behaviour changed. The database suite is separate and needs a real
-   PostgreSQL: `pytest tests/integration` (42 tests), not selected by a bare `pytest`.
+   PostgreSQL: `pytest tests/integration` (97 tests), not selected by a bare `pytest`.
 5. **Don't touch dissertation research artefacts** without asking: `notebooks/`,
    `evaluate/`, `scripts/`, `data/`, `models/`, `mlruns/`, `RESULTS.md`. Their results
    must stay reproducible. Import paths may be updated; methodology may not.
@@ -61,7 +61,9 @@ src/feedbackiq/        the product (installed with `pip install -e .`)
   api/                 FastAPI app, auth dependency, routes, request/response schemas
   services/            orchestration between the API and the ML code
   engine/              the analytics engine: typed inputs and results, no HTTP, no SQL
-  db/                  models, session, migrations' target, persistence functions, seed
+  db/                  models, session, persistence functions, job queue, seed
+  ingestion/           CSV parsing and validation: bytes in, typed rows out, no I/O
+  worker.py            the background worker (`python -m feedbackiq.worker`)
   nlp/                 sentiment, categorisation, embeddings, LLM analysis
   rag/                 retrieval-augmented question answering and its prompts
 migrations/            Alembic environment and versioned migration scripts
@@ -90,6 +92,10 @@ alembic upgrade head                   # create/update the schema
 python -m feedbackiq.db.seed           # dev organisation + the 24 default categories
 pytest tests/integration               # needs the database above; fails (not skips) without it
 alembic revision --autogenerate --rev-id 000N -m "what changed"
+
+python -m feedbackiq.worker            # run background jobs until stopped
+python -m feedbackiq.worker --drain    # run until the queue is empty (tests, smoke checks)
+docker compose up -d postgres worker   # the same worker in a container
 ```
 
 ## Things to know
@@ -118,4 +124,19 @@ alembic revision --autogenerate --rev-id 000N -m "what changed"
     `taxonomy_source` as `default` or `caller`.
   - Research taxonomies (other sentiment classes) load explicitly via
     `nlp.categoriser.load_research_taxonomy()`, which also raises rather than degrading.
-- Nothing in the API reads or writes the database yet — that is a later milestone.
+- **Ingestion (Milestone 5B).** `POST /api/imports` validates a CSV, stores organisation-owned
+  `feedback`, and queues an `analyse_import` job; the worker runs the engine. Rules:
+  - **Never analyse in a request.** The engine runs in the worker, not in the HTTP handler.
+  - **Ownership is explicit**, never inferred from a file, a filename or a CSV column.
+    `services/imports.py::_resolve_organisation` and `api/routes/imports.py::_organisation_id`
+    are the only two places that decide it, and both are the temporary stand-in that
+    authentication replaces.
+  - Whole-file problems raise `IngestionError`; a bad *row* is counted and reported with its
+    line number, never silently dropped and never fatal to the upload.
+  - Uploaded files are parsed in memory and not kept: the database is the source of truth.
+  - **Category identity is `categories.key`**, not the name. Results resolve by key, so a
+    display name may be reworded freely; splitting or merging categories may not.
+  - API routes open their own session *inside* the handler, after auth — never as a FastAPI
+    dependency, or an unauthenticated request would touch the database and `tests/api` would
+    need PostgreSQL.
+- Beyond ingestion, nothing in the API reads or writes the database yet.
