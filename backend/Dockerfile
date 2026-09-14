@@ -39,6 +39,12 @@ COPY pyproject.toml README.md ./
 COPY src/ ./src/
 RUN pip install --no-cache-dir -e . --no-deps
 
+# Migrations travel with the code, so the running container can create or update its own
+# schema (`alembic upgrade head`) instead of needing a checkout to do it. alembic.ini points
+# at migrations/ and reads the database URL from the environment, never from the file.
+COPY alembic.ini ./alembic.ini
+COPY migrations/ ./migrations/
+
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     OMP_NUM_THREADS=1 \

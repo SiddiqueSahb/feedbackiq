@@ -51,6 +51,11 @@ dependencies = [
     "sqlalchemy==2.0.51",
     "alembic==1.18.5",
     "psycopg[binary]==3.2.12",
+    # CSV upload (Milestone 5B). FastAPI needs python-multipart to parse multipart/form-data
+    # at all - without it an UploadFile endpoint fails at import time. It was already
+    # installed in this environment as an undeclared transitive package; declaring it makes
+    # the dependency real rather than lucky.
+    "python-multipart==0.0.32",
 ]
 
 [project.optional-dependencies]

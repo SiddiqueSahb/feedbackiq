@@ -30,6 +30,22 @@ pydantic-settings==2.15.0
 python-dotenv==1.0.1
 httpx==0.28.1
 
+# ── Persistence & ingestion ───────────────────────────────────────────────────
+# These are runtime dependencies of the product (pyproject.toml declares them too),
+# and they must be listed HERE as well: the images install from this file and then run
+# `pip install -e . --no-deps`, so anything absent from here is absent from the
+# container. Milestone 5B found that out the hard way - the worker could not import
+# psycopg inside the image, and alembic had no migrations to run.
+#
+# sqlalchemy and alembic also arrive transitively via langchain-community and mlflow;
+# pinning them makes the dependency real rather than lucky.
+sqlalchemy==2.0.51
+alembic==1.18.5
+psycopg[binary]==3.2.12
+# FastAPI needs this to parse multipart/form-data at all - without it the CSV upload
+# endpoint fails at import time.
+python-multipart==0.0.32
+
 # ── Experiment tracking ───────────────────────────────────────────────────────
 mlflow==2.12.1
 
