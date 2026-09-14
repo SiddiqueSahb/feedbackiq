@@ -69,6 +69,37 @@ services:
       - ./logs:/app/logs
     restart: unless-stopped
 
+  # The background worker (Milestone 5B). Same image as the backend, different command:
+  # it claims jobs from the `jobs` table and runs the analytics engine over imported
+  # feedback. Analysis deliberately does not happen in the API request.
+  #
+  #   docker compose up -d postgres worker
+  #   docker compose run --rm worker python -m feedbackiq.worker --drain
+  #
+  # Several replicas are safe - claiming uses SELECT ... FOR UPDATE SKIP LOCKED - but one
+  # is plenty here, and each loads its own copy of the models.
+  worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: feedbackiq-backend
+    container_name: feedbackiq-worker
+    command: python -m feedbackiq.worker
+    env_file:
+      - .env
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=postgresql+psycopg://feedbackiq:feedbackiq@postgres:5432/feedbackiq
+    volumes:
+      # models/ is mounted because the worker is the process that actually loads them.
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
   frontend:
     build:
       context: .
