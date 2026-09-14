@@ -93,14 +93,23 @@ def start_import_batch(
     data_source_id: uuid.UUID,
     original_filename: str | None = None,
     storage_reference: str | None = None,
+    source_hash: str | None = None,
     row_count: int = 0,
 ) -> ImportBatch:
-    """Record that an import began. Nothing runs it in the background yet."""
+    """
+    Record that an import began.
+
+    `source_hash` is the SHA-256 of the uploaded bytes, so an identical re-upload can be
+    recognised (see services/imports.py). `storage_reference` stays None while uploads are
+    processed in memory and never kept: the database is the source of truth for imported
+    feedback, and the original file is not customer data we need to hold.
+    """
     batch = ImportBatch(
         organisation_id=organisation_id,
         data_source_id=data_source_id,
         original_filename=original_filename,
         storage_reference=storage_reference,
+        source_hash=source_hash,
         status="importing",
         row_count=row_count,
     )
@@ -190,6 +199,112 @@ def save_feedback(
     session.flush()
 
     return rows
+
+
+# ---------------------------------------------------------------- reads for ingestion
+
+
+def get_data_source_by_name(
+    session: Session, *, organisation_id: uuid.UUID, name: str
+) -> DataSource | None:
+    return session.scalar(
+        select(DataSource).where(
+            DataSource.organisation_id == organisation_id, DataSource.name == name
+        )
+    )
+
+
+def get_import_batch(
+    session: Session, *, organisation_id: uuid.UUID, import_batch_id: uuid.UUID
+) -> ImportBatch | None:
+    """
+    One import batch, scoped to its organisation.
+
+    The `organisation_id` filter is not decoration: it is how a lookup by id stops being a
+    way to read another tenant's import once this is reachable over HTTP.
+    """
+    return session.scalar(
+        select(ImportBatch).where(
+            ImportBatch.id == import_batch_id,
+            ImportBatch.organisation_id == organisation_id,
+        )
+    )
+
+
+def find_import_batch_by_source_hash(
+    session: Session, *, organisation_id: uuid.UUID, source_hash: str
+) -> ImportBatch | None:
+    """The most recent completed import of this exact file, if there is one."""
+    return session.scalar(
+        select(ImportBatch)
+        .where(
+            ImportBatch.organisation_id == organisation_id,
+            ImportBatch.source_hash == source_hash,
+            ImportBatch.status == "completed",
+        )
+        .order_by(ImportBatch.created_at.desc())
+        .limit(1)
+    )
+
+
+def existing_content_hashes(
+    session: Session, *, organisation_id: uuid.UUID, hashes: Sequence[str]
+) -> set[str]:
+    """
+    Which of these content hashes this organisation already has.
+
+    One query for the whole batch rather than one per row - the difference between an
+    import that scales and one that does not.
+    """
+    if not hashes:
+        return set()
+
+    return set(
+        session.scalars(
+            select(Feedback.content_hash).where(
+                Feedback.organisation_id == organisation_id,
+                Feedback.content_hash.in_(set(hashes)),
+            )
+        ).all()
+    )
+
+
+def existing_external_ids(
+    session: Session,
+    *,
+    organisation_id: uuid.UUID,
+    data_source_id: uuid.UUID,
+    external_ids: Sequence[str],
+) -> set[str]:
+    """Which of these source-provided identifiers are already stored for this source."""
+    if not external_ids:
+        return set()
+
+    return set(
+        session.scalars(
+            select(Feedback.external_id).where(
+                Feedback.organisation_id == organisation_id,
+                Feedback.data_source_id == data_source_id,
+                Feedback.external_id.in_(set(external_ids)),
+            )
+        ).all()
+    )
+
+
+def feedback_for_import_batch(
+    session: Session, *, organisation_id: uuid.UUID, import_batch_id: uuid.UUID
+) -> list[Feedback]:
+    """Everything stored by one import, oldest first, for the worker to analyse."""
+    return list(
+        session.scalars(
+            select(Feedback)
+            .where(
+                Feedback.organisation_id == organisation_id,
+                Feedback.import_batch_id == import_batch_id,
+            )
+            .order_by(Feedback.created_at, Feedback.id)
+        ).all()
+    )
 
 
 # ---------------------------------------------------------------- analysis runs
@@ -406,16 +521,25 @@ def _resolve_category_id(
     """
     Turn the engine's category into a `categories.id`.
 
-    The engine's `Category.id` is whatever the caller used when passing the taxonomy in -
-    a database UUID when the categories came from this table, a slug when they came from
-    the dissertation's taxonomy file. So: use the id when it is a UUID that exists, and
-    otherwise look the name up in this organisation's taxonomy, then in the global
-    defaults. An unknown name stores NULL rather than inventing a row.
+    The engine's `Category.id` is whatever the caller used when passing the taxonomy in, so
+    three things are tried in order of how much they can be trusted:
+
+    1. **a database UUID** - the categories came straight from this table;
+    2. **the stable key** - the canonical taxonomy (1.1.0 onward) identifies categories by
+       key, which survives a display-name change;
+    3. **the name** - a hand-built taxonomy, or a row written before keys existed.
+
+    An unrecognised category stores NULL rather than inventing a row.
     """
-    if match.name in cache:
-        return cache[match.name]
+    cache_key = f"{match.category_id}|{match.name}"
+    if cache_key in cache:
+        return cache[cache_key]
 
     resolved = _category_id_from_uuid(session, match.category_id)
+    if resolved is None:
+        resolved = _category_id_from_key(
+            session, organisation_id=organisation_id, key=match.category_id
+        )
     if resolved is None:
         resolved = _category_id_from_name(
             session, organisation_id=organisation_id, name=match.name
@@ -424,7 +548,7 @@ def _resolve_category_id(
     if resolved is None:
         log.warning("No category row matches %r; storing result without a category.", match.name)
 
-    cache[match.name] = resolved
+    cache[cache_key] = resolved
 
     return resolved
 
@@ -439,6 +563,26 @@ def _category_id_from_uuid(session: Session, category_id: str | None) -> uuid.UU
         return None
 
     return session.scalar(select(Category.id).where(Category.id == candidate))
+
+
+def _category_id_from_key(
+    session: Session, *, organisation_id: uuid.UUID, key: str | None
+) -> uuid.UUID | None:
+    """The organisation's own category wins over a global default with the same key."""
+    if not key:
+        return None
+
+    own = session.scalar(
+        select(Category.id).where(
+            Category.organisation_id == organisation_id, Category.key == key
+        )
+    )
+    if own is not None:
+        return own
+
+    return session.scalar(
+        select(Category.id).where(Category.organisation_id.is_(None), Category.key == key)
+    )
 
 
 def _category_id_from_name(

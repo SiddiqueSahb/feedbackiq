@@ -105,6 +105,30 @@ class Settings(BaseSettings):
     # Nothing in the API reads the database yet - see docs/production/milestone-04.md.
     DATABASE_URL: str = "postgresql+psycopg://feedbackiq:feedbackiq@localhost:55432/feedbackiq"
 
+    # ---------------------------------------------------------------- ingestion (Milestone 5B)
+
+    # Upload limits. Checked before the body is read into memory, so an oversized file is
+    # refused rather than absorbed.
+    MAX_UPLOAD_BYTES: int = 10 * 1024 * 1024      # 10 MB
+    MAX_IMPORT_ROWS: int = 50_000                 # data rows per upload
+
+    # The data source every CSV upload is attributed to, per organisation.
+    IMPORT_SOURCE_NAME: str = "CSV upload"
+
+    # **Temporary, until authentication exists.** Uploads are attributed to this
+    # organisation when the caller does not name one. Milestone 7/8 replace this with the
+    # authenticated user's organisation; nothing else may infer ownership.
+    DEV_ORGANISATION_SLUG: str = "dev"
+
+    # ---------------------------------------------------------------- background worker
+
+    # Feedback rows per engine call. The engine batches a transformer forward pass, so this
+    # trades memory against throughput; 50 keeps a worker comfortable on a small container.
+    ANALYSIS_BATCH_SIZE: int = 50
+
+    # How long the worker sleeps when no job is waiting.
+    WORKER_POLL_SECONDS: float = 2.0
+
     # ---------------------------------------------------------------- API
 
     # Required in the x-api-key header on every /api/* route except health.

@@ -27,6 +27,29 @@ class DataNotFoundError(DataError):
         self.path = path
 
 
+class JobStateError(FeedBackError):
+    """
+    An invalid job state transition was attempted.
+
+    The lifecycle is queued -> running -> succeeded | failed. Anything else - finishing a
+    job nobody claimed, re-running a finished one - is a bug in the caller, not a customer
+    error, so it raises rather than quietly correcting itself. See db/jobs.py.
+    """
+
+
+class ImportError_(FeedBackError):
+    """Reserved name placeholder - see IngestionError below."""
+
+
+class IngestionError(FeedBackError):
+    """
+    An upload cannot be accepted at all: unreadable file, no text column, too large.
+
+    Distinct from a *row* being rejected, which is reported per row in the import's error
+    summary rather than raised - one bad line must not cost a customer their whole upload.
+    """
+
+
 class TaxonomyError(FeedBackError):
     """
     The complaint taxonomy is missing, unreadable or invalid.
