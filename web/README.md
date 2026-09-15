@@ -29,6 +29,29 @@ npm test               # Vitest + Testing Library
 npm run build          # type-check, then a production build in dist/
 ```
 
+## Browser tests against the real API
+
+Playwright drives Chromium through the built app and the real FastAPI backend and PostgreSQL.
+Nothing about authentication is faked: the cookie is the API's real HttpOnly session cookie.
+
+```bash
+# from the repository root: a disposable database, migrated, and the API on port 8000
+docker compose exec postgres createdb -U feedbackiq feedbackiq_e2e          # once
+DATABASE_URL=postgresql+psycopg://feedbackiq:feedbackiq@localhost:55432/feedbackiq_e2e alembic upgrade head
+ENVIRONMENT=development \
+DATABASE_URL=postgresql+psycopg://feedbackiq:feedbackiq@localhost:55432/feedbackiq_e2e \
+  uvicorn feedbackiq.api.main:app --port 8000
+
+# then
+cd web
+npx playwright install chromium      # once
+npm run e2e                          # builds, serves with `vite preview`, runs e2e/
+```
+
+`ENVIRONMENT=development` keeps the session cookie non-`Secure`, because this runs over plain HTTP.
+Every test registers fresh email addresses, so the database never needs resetting. To test an app
+that is already running - the nginx container, say - set `E2E_BASE_URL=http://localhost:8080`.
+
 ## API types
 
 `src/api/schema.d.ts` is generated from the backend's OpenAPI document and never edited by hand.

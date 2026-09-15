@@ -52,3 +52,9 @@
 .fullWidth {
   width: 100%;
 }
+
+/* A react-router Link styled as a button (ButtonLink). */
+.link,
+.link:hover {
+  text-decoration: none;
+}
