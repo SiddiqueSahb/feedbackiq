@@ -10,7 +10,7 @@ import { useNavigate } from "react-router";
 
 import { fetchCurrentUser, registerAccount, signIn, signOut } from "../api/auth";
 import type { CurrentUser, OrganisationContext } from "../api/types";
-import { SESSION_KEY, endSession } from "./sessionCache";
+import { SESSION_KEY, endSession, replaceSession } from "./sessionCache";
 
 /** A signed-in user who belongs to an organisation - what every page inside the app has. */
 export type SignedInUser = CurrentUser & { organisation: OrganisationContext };
@@ -46,10 +46,7 @@ export function useSignIn() {
     mutationFn: signIn,
     // A 401 here means "wrong email or password", not "your session ended" (see queryClient.ts).
     meta: { credentialCheck: true },
-    onSuccess: (user) => {
-      queryClient.clear();
-      queryClient.setQueryData(SESSION_KEY, user);
-    },
+    onSuccess: (user) => replaceSession(queryClient, user),
   });
 }
 
@@ -59,10 +56,7 @@ export function useRegister() {
   return useMutation({
     mutationFn: registerAccount,
     meta: { credentialCheck: true },
-    onSuccess: (user) => {
-      queryClient.clear();
-      queryClient.setQueryData(SESSION_KEY, user);
-    },
+    onSuccess: (user) => replaceSession(queryClient, user),
   });
 }
 

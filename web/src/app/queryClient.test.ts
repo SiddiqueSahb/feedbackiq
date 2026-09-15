@@ -4,6 +4,7 @@
  * The rule: a 401 from a data request means the server has ended the session, so the app forgets
  * everything it cached. A 401 from signing in is only a wrong password, and must not.
  */
+import { QueryObserver } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 
 import { ApiError } from "../api/client";
@@ -28,6 +29,24 @@ describe("a 401 from a data request", () => {
 
     expect(client.getQueryData(SESSION_KEY)).toBeNull();
     expect(client.getQueryData(["feedback"])).toBeUndefined();
+  });
+
+  it("tells whatever is already watching the session - the route guards - that it ended", async () => {
+    // Checking the cache value is not enough: an earlier version set `null` on a fresh cache entry
+    // after clearing the old one, so the guards (still watching the old entry) were never told and
+    // the refused page stayed on screen. This subscribes the way a component does.
+    const client = createQueryClient();
+    client.setQueryData(SESSION_KEY, USER);
+
+    const guard = new QueryObserver(client, { queryKey: SESSION_KEY, enabled: false });
+    const seen: unknown[] = [];
+    const unsubscribe = guard.subscribe((result) => seen.push(result.data));
+
+    const upload = client.getMutationCache().build(client, { mutationFn: reject(401) });
+    await upload.execute(undefined).catch(() => undefined);
+
+    expect(seen.at(-1)).toBeNull();
+    unsubscribe();
   });
 
   it("does the same for a data-changing request such as an upload", async () => {
