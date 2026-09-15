@@ -1,7 +1,8 @@
 import asyncio
-from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query
+
+from feedbackiq.engine.types import SentimentLabel
 
 from feedbackiq.services.analytics_service import (
     get_platform_list,
@@ -92,11 +93,10 @@ async def rating_distribution() -> list[dict]:
     description="Return the most frequent business keywords."
 )
 async def keywords(
-    sentiment: Literal[
-        "positive",
-        "negative",
-        "neutral",
-    ] | None = None,
+    # The engine's one definition, not a local Literal: two Literals with the same values in a
+    # different order are cached as one object by `typing`, so whichever was created first
+    # decided the enum order in the OpenAPI document (tests/unit/test_literal_ordering.py).
+    sentiment: SentimentLabel | None = None,
     n: int = Query(30, ge=1, le=100),
     top_n: int | None = Query(None, ge=1, le=100),
 ) -> list[dict]:

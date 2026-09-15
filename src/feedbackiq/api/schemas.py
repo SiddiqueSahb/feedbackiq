@@ -8,6 +8,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+from feedbackiq.engine.types import SentimentLabel
+
 
 class ReviewRequest(BaseModel):
     text: str = Field(..., min_length=3, max_length=5000)
@@ -57,11 +59,10 @@ class SearchRequest(BaseModel):
         "twitter_airline",
     ] | None = None
 
-    sentiment_filter: Literal[
-        "positive",
-        "negative",
-        "neutral",
-    ] | None = None
+    # The engine's one definition rather than a local Literal in another order: `typing` caches
+    # equal Literals as one object, so the order in the OpenAPI document depended on import order
+    # (tests/unit/test_literal_ordering.py).
+    sentiment_filter: SentimentLabel | None = None
 
     min_rating: float = Field(
         1.0,
