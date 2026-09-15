@@ -34,10 +34,12 @@ architectural specification.
 3. **Small, reviewable changes.** Logical commits, not one large unexplained one.
    Never force-push; never rewrite pushed history.
 4. **Run the tests after every meaningful change:** `pytest` must stay at
-   **508 passed, 2 xfailed** or better (382 before Milestone 7; 104 passed, 4 xfailed before
-   Milestone 3). Never weaken or delete a test to get green, and never flip a strict `xfail`
-   without documenting why the behaviour changed. The database suite is separate and needs a
-   real PostgreSQL: `pytest tests/integration` (261 tests), not selected by a bare `pytest`.
+   **513 passed, 2 xfailed** or better (508 before Milestone 8; 382 before Milestone 7). Never
+   weaken or delete a test to get green, and never flip a strict `xfail` without documenting why
+   the behaviour changed. The database suite is separate and needs a real PostgreSQL:
+   `pytest tests/integration` (273 tests), not selected by a bare `pytest`. The web app has its
+   own: `npm test` in `web/` (117 Vitest tests) and `npm run e2e` (15 Playwright tests against the
+   real API).
    Gate commits on pytest's exit code explicitly: `set -e` does not stop a chain when
    `pytest | tail` fails.
 5. **Don't touch dissertation research artefacts** without asking: `notebooks/`,
@@ -70,7 +72,8 @@ src/feedbackiq/        the product (installed with `pip install -e .`)
   nlp/                 sentiment, categorisation, embeddings, LLM analysis
   rag/                 retrieval-augmented question answering and its prompts
 migrations/            Alembic environment and versioned migration scripts
-frontend/              Streamlit app (internal tool; talks to the API over HTTP only)
+web/                   the customer web app: React + TypeScript + Vite, served by nginx (Milestone 8)
+frontend/              Streamlit app (internal tool; research routes only, over HTTP)
 backend/               build files for the API image (Dockerfile, extra requirements)
 tests/unit, tests/api  the safety net: offline, no models, no network
 tests/integration      database tests against a real PostgreSQL (run explicitly)
@@ -99,6 +102,12 @@ alembic revision --autogenerate --rev-id 000N -m "what changed"
 python -m feedbackiq.worker            # run background jobs until stopped
 python -m feedbackiq.worker --drain    # run until the queue is empty (tests, smoke checks)
 docker compose up -d postgres worker   # the same worker in a container
+
+cd web && npm ci && npm run dev        # the web app on :5173, /api proxied to :8000
+npm run lint && npm run typecheck && npm run api:check && npm test && npm run build
+npm run e2e                            # Playwright against a running API (see web/README.md)
+docker compose up -d --build postgres backend web   # the web app behind nginx on :8080
+python -m feedbackiq.api.openapi_export web/openapi.json && (cd web && npm run api:types)
 ```
 
 ## Things to know
@@ -210,6 +219,39 @@ docker compose up -d postgres worker   # the same worker in a container
     other tenant's identifiers or text. `test_tenant_isolation.py` and the composite foreign
     keys stay as the lower layers.
   - The worker still takes the organisation from the job row, never from a request.
+- **The web app (Milestone 8).** `web/`; see `docs/production/milestone-08.md` and `web/README.md`.
+  - **Same origin only.** The app calls `/api/...` on its own origin; the Vite dev server and nginx
+    (`web/nginx.conf`) proxy it, keeping the `Host` header. Never call the backend's host directly and
+    never switch `fetch` to `credentials: "include"`.
+  - **No auth state in JavaScript.** The session is an HttpOnly cookie. The app's only record of who
+    is signed in is `GET /api/v1/auth/me`, cached under `["session"]`. Nothing auth-related goes in
+    `localStorage` or `sessionStorage`, and no request ever carries an organisation id.
+  - **Write the session before dropping the rest of the cache** (`auth/sessionCache.ts::replaceSession`).
+    Clearing first detaches the route guards from the entry they watch, and a 401 then leaves the
+    refused page on screen — a real bug found in Milestone 8.
+  - Any 401 from a data request ends the session in the app (`app/queryClient.ts`); sign-in,
+    registration and sign-out carry `meta: { credentialCheck: true }` so a wrong password is not one.
+  - **API types are generated.** After changing a backend request or response shape, regenerate
+    `web/openapi.json` and `src/api/schema.d.ts` (command above). CI fails on drift in either.
+  - **A `Literal` with the same values must be written in the same order everywhere** (or share an
+    alias): `typing` caches equal Literals as one object, so the OpenAPI enum order otherwise depends
+    on import order. `tests/unit/test_literal_ordering.py` enforces it.
+  - **Chart colours were measured**, not picked: the sentiment scale and category colour in
+    `src/styles/tokens.css` passed the dataviz palette validator. Re-run it before changing them.
+    Every chart with two or more series has a legend, values reachable as text or a table, and gets
+    rendered and looked at with real data before it is called done — four layout defects were found
+    that way that tests had passed over.
+  - nginx sends a strict same-origin Content-Security-Policy: no inline scripts or styles (React
+    `style` props are fine). Every Playwright spec calls `failOnContentSecurityPolicyViolations()`.
+  - Playwright role and label names match **substrings** unless `{ exact: true }`.
+  - To count SQL statements in a test, listen on the `Engine` class: `get_engine()` and
+    `get_engine(None)` are different `lru_cache` entries, i.e. different engines.
+  - CI's browser tests have no ML models, so they stop at "Queued"; analysis completing is verified in
+    Docker with the worker.
+- **Release prerequisites — before any public exposure** (`docs/production/milestone-08.md` §13):
+  rate limiting and account lockout on sign-in, registration and upload; HTTPS with HSTS;
+  `ALLOWED_ORIGINS` set to the real web origin and uvicorn trusting the proxy's forwarded headers; an
+  audit log. None of these is built yet.
 - **Stale jobs** are recovered by `services/maintenance.py` — `running` for longer than
   `STALE_JOB_MINUTES` is requeued (or abandoned once attempts are spent). Run on worker
   startup or via `python -m feedbackiq.worker --reclaim`. Deliberately not on a timer in
