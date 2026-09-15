@@ -22,6 +22,17 @@ export function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+// Feedback dates are often dates without a time (a CSV's created_at), stored as midnight UTC. Shown
+// in UTC so that date never slips to the day before in a time zone behind UTC, and without a time,
+// which would be invented ("01:00" in British Summer Time).
+const dateFormat = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+
+export function formatDate(value: string | null | undefined): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "—" : dateFormat.format(date);
+}
+
 export function formatDateTime(value: string | null | undefined): string {
   if (!value) return "—";
   const date = new Date(value);

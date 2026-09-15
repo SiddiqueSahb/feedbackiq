@@ -37,6 +37,8 @@ const DASHBOARD_ROUTES = {
       latest_feedback_at: null,
     },
   },
+  "GET /api/v1/analytics/trend?interval=week": { status: 200, body: [] },
+  "GET /api/v1/analytics/categories": { status: 200, body: [] },
 };
 const PASSWORD = "correct horse battery staple";
 

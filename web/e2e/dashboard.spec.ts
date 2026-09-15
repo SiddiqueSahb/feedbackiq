@@ -48,6 +48,10 @@ test("after an upload the dashboard counts it and says analysis is in progress",
   await expect(tile(page, "Feedback")).toContainText("0 analysed · 3 waiting");
   await expect(tile(page, "Negative")).toContainText("Waiting for analysis");
   await expect(tile(page, "Average rating")).toContainText("1.3");
+
+  // Nothing is analysed without the worker, so the charts say so rather than drawing empty axes.
+  await expect(page.getByText("No analysed feedback in this period yet.")).toBeVisible();
+  await expect(page.getByText("No analysed feedback to break down yet.")).toBeVisible();
 });
 
 test("each organisation's dashboard counts only its own feedback", async ({ browser }) => {

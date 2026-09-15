@@ -38,10 +38,37 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-async function openDashboard(summary: Parameters<typeof fakeApi>[0][string]) {
-  fakeApi({ "GET /api/v1/auth/me": { status: 200, body: OWNER }, "GET /api/v1/analytics/summary": summary });
+const TREND = [
+  { period: "2026-08-31T00:00:00+00:00", feedback_count: 80, negative: 30, neutral: 8, positive: 42, average_rating: 3.1 },
+  { period: "2026-09-07T00:00:00+00:00", feedback_count: 85, negative: 55, neutral: 12, positive: 18, average_rating: 2.2 },
+];
+
+const CATEGORIES = [
+  {
+    category_key: "billing_and_payments", category: "Billing & Payments", count: 55, percentage: 33.3,
+    sentiment_counts: { positive: 0, neutral: 5, negative: 50 }, average_confidence: 0.71,
+  },
+  {
+    category_key: null, category: "Unclassified / Not categorised", count: 60, percentage: 36.4,
+    sentiment_counts: { positive: 60, neutral: 0, negative: 0 }, average_confidence: null,
+  },
+];
+
+async function openDashboard(
+  summary: Parameters<typeof fakeApi>[0][string],
+  extra: Parameters<typeof fakeApi>[0] = {},
+) {
+  const api = fakeApi({
+    "GET /api/v1/auth/me": { status: 200, body: OWNER },
+    "GET /api/v1/analytics/summary": summary,
+    "GET /api/v1/analytics/trend?interval=week": { status: 200, body: TREND },
+    "GET /api/v1/analytics/trend?interval=month": { status: 200, body: TREND },
+    "GET /api/v1/analytics/categories": { status: 200, body: CATEGORIES },
+    ...extra,
+  });
   renderApp("/dashboard");
   await screen.findByRole("heading", { name: "Dashboard" });
+  return api;
 }
 
 /** The tile whose label is `label`: its <dt> and the <dd> values beside it. */
@@ -68,7 +95,9 @@ describe("headline figures", () => {
     await openDashboard({ status: 200, body: figures() });
 
     // "Sept" or "Sep" depending on the ICU data bundled with Node.
-    expect(await screen.findByText(/latest feedback 14 Sept? 2026/)).toBeInTheDocument();
+    const description = await screen.findByText(/latest feedback 14 Sept? 2026/);
+    // A date, not a date and time: feedback dates are often date-only, and a time would be invented.
+    expect(description.textContent).not.toMatch(/\d{1,2}:\d{2}/);
   });
 
   it("shows a dash, not a misleading rating, when no feedback carries one", async () => {
@@ -125,6 +154,41 @@ describe("states of the organisation's data", () => {
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
 
     expect(await screen.findByText("65%")).toBeInTheDocument();
+  }, 15000);
+});
+
+describe("trend and categories", () => {
+  it("shows the sentiment trend and the category breakdown for the organisation", async () => {
+    await openDashboard({ status: 200, body: figures() });
+
+    expect(await screen.findByRole("img", { name: /Sentiment over time/ })).toBeInTheDocument();
+    const categories = await screen.findByRole("list", { name: "Complaint categories" });
+    expect(categories).toHaveTextContent("Billing & Payments");
+    expect(screen.getByRole("list", { name: "Not categorised" })).toHaveTextContent("60");
+  });
+
+  it("groups the trend by week, and asks the API again when another grouping is chosen", async () => {
+    const api = await openDashboard({ status: 200, body: figures() });
+    await screen.findByRole("img", { name: /Sentiment over time/ });
+
+    expect(screen.getByRole("button", { name: "Week" })).toHaveAttribute("aria-pressed", "true");
+
+    await userEvent.click(screen.getByRole("button", { name: "Month" }));
+
+    expect(screen.getByRole("button", { name: "Month" })).toHaveAttribute("aria-pressed", "true");
+    await screen.findByText(/Analysed feedback per month/);
+    expect(api.calls.some((call) => call.url === "/api/v1/analytics/trend?interval=month")).toBe(true);
+  });
+
+  it("keeps the rest of the dashboard when only the trend fails", async () => {
+    await openDashboard(
+      { status: 200, body: figures() },
+      { "GET /api/v1/analytics/trend?interval=week": { status: 500, body: { detail: "Could not load the trend." } } },
+    );
+
+    expect(await screen.findByText("The trend could not be loaded", {}, { timeout: 8000 })).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: "Complaint categories" })).toBeInTheDocument();
+    expect(within(tile("Negative")).getByText("65%")).toBeInTheDocument();
   }, 15000);
 });
 

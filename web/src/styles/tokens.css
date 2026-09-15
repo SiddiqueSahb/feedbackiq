@@ -42,10 +42,23 @@
   --color-info-soft: #f0f4ff;
   --color-info-border: #c7d3fb;
 
-  /* Sentiment - always paired with a label */
-  --color-sentiment-positive: #0f766e;
-  --color-sentiment-neutral: #64748b;
-  --color-sentiment-negative: #c2410c;
+  /* Sentiment - a diverging scale: two opposite poles and a grey midpoint that reads as "nothing".
+     Measured, not picked by eye (dataviz validator, adjacent pairs as they sit in a stacked bar,
+     on #ffffff): negative↔neutral CVD ΔE 16.8, normal-vision ΔE 22.0; neutral↔positive clear too.
+     Orange rather than red keeps negative sentiment apart from the reserved danger/error red.
+     The neutral grey is below 3:1 against white by design, so every sentiment chart also has a
+     legend, text values and a table view. Always paired with a label. */
+  --color-sentiment-positive: #2a78d6;
+  --color-sentiment-neutral: #c3c2b7;
+  --color-sentiment-negative: #eb6834;
+
+  /* Chart chrome and single-series marks. Gridlines and axes are hairlines one step off the
+     surface. The category bars are one series, so one colour for every bar: violet from the
+     reference palette rather than its first-slot blue, which on this page already means
+     "positive". */
+  --color-chart-grid: #eceef2;
+  --color-chart-axis: #cdd2da;
+  --color-chart-category: #4a3aa7;
 
   /* Type */
   --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
