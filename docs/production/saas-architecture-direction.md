@@ -143,7 +143,7 @@ is fine and expected (17 files do).
 
 | Today | Replaced by | When |
 |---|---|---|
-| Streamlit internal app | React/TypeScript customer app | roadmap M11 |
+| Streamlit internal app | React/TypeScript customer app | roadmap M8 (foundation), M11 (remaining pages) |
 | Global FAISS index over the research corpus | Tenant-scoped retrieval (pgvector or a vector service), decided on evidence | roadmap M12 |
 | Synchronous per-request analysis | `jobs` table + worker | roadmap M5/M5B |
 | Local file-based datasets | Customer-uploaded feedback in PostgreSQL + object storage | roadmap M5 |

@@ -1,6 +1,6 @@
 # 07 — Production Roadmap
 
-> Part of the FeedbackIQ productionisation audit · 2026-09-10 · **Plan only — no milestone after M0 has started.**
+> Part of the FeedbackIQ productionisation audit · 2026-09-10 · **Status 2026-09-15: M0–M8 complete.** Numbers match the delivered milestone documents; see [Numbering](#numbering).
 > Previous: [06 — SaaS data model](06-saas-data-model.md) · Next: [08 — Next step](08-next-step.md)
 
 ---
@@ -22,6 +22,7 @@
 | **Feedback ingestion moved from M9 to M5** (right after the database) | Without ingestion, the database and API have nothing but the research corpus. Ingestion is what turns FeedbackIQ from a demo into a product. |
 | **Docker + deployment moved from M15 to M10** (staging, before the customer frontend) | Deployment problems found at the end are expensive, and a staging environment must exist before real customer data. Docker already exists, so this is extending, not starting. |
 | **Security & testing are continuous**, with a dedicated pre-launch pass (M16) | Tests and security review are part of every milestone's acceptance criteria. |
+| **Multi-tenancy delivered inside M7; a frontend foundation became M8** (decided when M7 and M8 were approved) | The M7 brief combined authentication with membership and enforced organisation scope. The M8 brief asked for a first customer web app over that API, pulled forward from M11. |
 
 ## Overview
 
@@ -36,23 +37,35 @@ M0 ─ M1 ─ M2 ─┬─ M3 ─┐
 | # | Milestone | Outcome in one line | Depends on |
 |---|---|---|---|
 | M0 | Repository & architecture audit ✅ | You understand what exists and what's missing | — |
-| M1 | Repository foundation & safety net | One git-tracked copy, a dissertation baseline tag, a fast offline test suite in CI | M0 |
-| M2 | Clean project structure | Installable package, one config, one logging setup, research code separated | M1 |
-| M3 | Production-ready analytics engine | Batch analysis of *any* feedback list, typed outputs, model versions | M2 |
-| M4 | PostgreSQL / database layer | Persistent, tenant-ready schema with migrations | M2 |
-| M5 | Feedback ingestion & background analysis | CSV → stored feedback → worker → stored results | M3, M4 |
-| M6 | Backend API v1 | Versioned REST API over the database | M5 |
-| M7 | Authentication | Real users, sessions, secure passwords | M6 |
-| M8 | Multi-tenancy | Many organisations safely share one deployment | M7 |
-| M9 | Roles, permissions & invitations | Owner/admin/analyst/viewer, invites, org API keys | M8 |
-| M10 | Docker + staging deployment | Automated deploy of web + worker + migrations to staging | M8 (M9 recommended) |
-| M11 | Production frontend / dashboard | Customer-facing React app | M9, M10 |
+| M1 | Repository foundation & safety net ✅ | One git-tracked copy, a dissertation baseline tag, a fast offline test suite in CI | M0 |
+| M2 | Clean project structure ✅ | Installable package, one config, one logging setup, research code separated | M1 |
+| M3 | Production-ready analytics engine ✅ | Batch analysis of *any* feedback list, typed outputs, model versions | M2 |
+| M4 | PostgreSQL / database layer ✅ | Persistent, tenant-ready schema with migrations | M2 |
+| M5 | Feedback ingestion & background analysis ✅ | CSV → stored feedback → worker → stored results | M3, M4 |
+| M6 | Backend API v1 ✅ | Versioned REST API over the database | M5 |
+| M7 | Authentication & multi-tenancy ✅ | Real users and sessions; many organisations safely share one deployment | M6 |
+| M8 | Frontend foundation ✅ | Customer web app: sign-up, sign-in, CSV upload, dashboard | M7 |
+| M9 | Roles, permissions & invitations | Owner/admin/analyst/viewer, invites, org API keys | M7 |
+| M10 | Docker + staging deployment | Automated deploy of web + worker + migrations to staging | M7 (M9 recommended) |
+| M11 | Production frontend — remaining pages | Organisation switcher, feedback explorer, categories and members pages | M8, M9, M10 |
 | M12 | Analytics & insight workflows | Trends, emerging issues, tenant-scoped search & Q&A, evidence-linked insights | M5, M6, M11 |
 | M13 | Reports | Exports and executive reports generated in the background | M12 |
 | M14 | Usage tracking & limits | Per-organisation consumption known and capped | M12, M13 |
 | M15 | Billing / subscriptions | Stripe plans connected to limits | M14 |
 | M16 | Security & testing hardening | Pre-launch security review, RLS, E2E and load tests | M10–M15 |
 | M17 | Monitoring & production hardening | Errors, performance, LLM cost and model drift visible, with alerts | M10 onward |
+
+### Numbering
+
+The numbers above are the milestones as delivered (`milestone-01.md` … `milestone-08.md`). Two things
+changed from the original plan: **the original M8, multi-tenancy, was delivered inside M7**, and **a
+frontend foundation was pulled forward from M11 as M8**. M9 onwards keep their original numbers.
+
+Work planned for M7 but not delivered there — email verification, password reset, login rate limiting
+and lockout, and an audit log — is recorded as release prerequisites in
+[milestone-08 §13](milestone-08.md#13-release-prerequisites--before-any-public-exposure). **M9's scope is
+confirmed in its Part 1 plan:** the Milestone 8 review proposed bringing those prerequisites forward,
+which would move roles and invitations later. This table is updated once that is decided.
 
 ---
 
@@ -66,7 +79,9 @@ M0 ─ M1 ─ M2 ─┬─ M3 ─┐
 
 ---
 
-## M1 — Repository foundation & safety net
+## M1 — Repository foundation & safety net ✅
+
+> Delivered: [milestone-01](milestone-01.md).
 
 - **Objective:** make change *safe*. One git-tracked working copy, a frozen dissertation baseline, and an automated test suite that runs in seconds without models, data or network.
 - **Files/components affected:** git history and dotfiles consolidated into one folder (`.git/`, `.gitignore`, `.env.example`, `.dockerignore`, `.streamlit/`, `.github/`); `pytest.ini`; `tests/conftest.py`; new `tests/unit/`, `tests/api/`; `.github/workflows/ci.yml` (test job); a short testing guide. **No production code changes.** Full detail in [08](08-next-step.md).
@@ -85,7 +100,9 @@ M0 ─ M1 ─ M2 ─┬─ M3 ─┐
 
 ---
 
-## M2 — Clean project structure
+## M2 — Clean project structure ✅
+
+> Delivered: [milestone-02](milestone-02.md).
 
 - **Objective:** make the code an installable package with clear boundaries, one configuration and one logging setup, **without changing behaviour**.
 - **Files/components affected:**
@@ -108,7 +125,9 @@ M0 ─ M1 ─ M2 ─┬─ M3 ─┐
 
 ---
 
-## M3 — Production-ready analytics engine
+## M3 — Production-ready analytics engine ✅
+
+> Delivered: [milestone-03](milestone-03.md).
 
 - **Objective:** turn `nlp/` + `rag/` into an engine library that analyses **any list of feedback texts** (not just the research corpus), in batches, with typed inputs/outputs and recorded model versions.
 - **Scope:**
@@ -138,7 +157,9 @@ M0 ─ M1 ─ M2 ─┬─ M3 ─┐
 
 ---
 
-## M4 — PostgreSQL / database layer
+## M4 — PostgreSQL / database layer ✅
+
+> Delivered: [milestone-04](milestone-04.md).
 
 - **Objective:** persistent storage for feedback and analysis results, **tenant-ready from day one** (one seeded organisation for now).
 - **Files/components affected:** `docker-compose.yml` (Postgres + pgvector for development); `db/models.py`, `db/session.py`; `migrations/` (Alembic); `DATABASE_URL` in config; a seed script for a demo organisation with a sample of the research corpus; `tests/integration/` against real Postgres (CI service container). Tables: see [06 §6](06-saas-data-model.md#6-when-each-table-arrives).
@@ -155,7 +176,10 @@ M0 ─ M1 ─ M2 ─┬─ M3 ─┐
 
 ---
 
-## M5 — Feedback ingestion & background analysis
+## M5 — Feedback ingestion & background analysis ✅
+
+> Delivered in two parts: [milestone-05a](milestone-05a.md) (the canonical taxonomy and the SaaS
+> architecture direction, done first) and [milestone-05b](milestone-05b.md) (ingestion and the worker).
 
 - **Objective:** upload a CSV → stored feedback → background analysis → stored results. **The first milestone where FeedbackIQ analyses a company's own data.**
 - **Scope:**
@@ -177,7 +201,9 @@ M0 ─ M1 ─ M2 ─┬─ M3 ─┐
 
 ---
 
-## M6 — Backend API v1
+## M6 — Backend API v1 ✅
+
+> Delivered: [milestone-06](milestone-06.md), with the 13-category product taxonomy.
 
 - **Objective:** a stable, versioned REST API over the database.
 - **Scope:**
@@ -197,13 +223,17 @@ M0 ─ M1 ─ M2 ─┬─ M3 ─┐
 
 ---
 
-## M7 — Authentication
+## M7 — Authentication & multi-tenancy ✅
+
+> Delivered: [milestone-07](milestone-07.md), together with the original M8 (multi-tenancy, below).
+> Not delivered, and carried forward as release prerequisites: email verification, password reset,
+> login rate limiting and lockout, and audit log entries (the ✗ items below).
 
 - **Objective:** real user identity.
 - **Scope:**
   - Sign-up, log-in, log-out; argon2 password hashing via a well-known library.
   - Server-side sessions in Postgres with `HttpOnly`, `Secure`, `SameSite` cookies; CSRF protection for state-changing cookie requests.
-  - Email verification and password reset (email provider needed); login rate limiting; audit log entries.
+  - ✗ Email verification and password reset (email provider needed); login rate limiting; audit log entries.
 - **Decision to confirm:** build sessions yourself with well-known libraries (recommended, for simplicity and learning value), or use a managed provider (Auth0/Clerk/Supabase Auth) if SSO/SAML is needed soon.
 - **Files/components affected:** `auth/*`; `users`, `sessions`, `audit_logs` tables; `current_user` dependency; migrations; tests.
 - **Dependencies:** M6.
@@ -214,20 +244,31 @@ M0 ─ M1 ─ M2 ─┬─ M3 ─┐
   - Passwords are never stored or logged in plain text (tested).
   - Sessions expire and can be revoked.
   - A test enumerates all v1 routes and confirms each requires login, except health and auth (the same "protected by default" idea as today's router-level dependency).
-  - Brute-force attempts are rate limited.
+  - ✗ Brute-force attempts are rate limited.
 
----
-
-## M8 — Multi-tenancy
+### Multi-tenancy — planned as M8, delivered in M7
 
 - **Objective:** many organisations safely share one deployment.
 - **Scope:** create an organisation at sign-up; `organisation_members`; org in URL (`/api/v1/orgs/{org_id}/…`); a membership dependency; `org_id` required by every service function; composite foreign keys; cross-tenant test suite ([06 §4](06-saas-data-model.md#4-tenant-isolation--how-it-should-work)).
+  - **Decided differently in M7:** the organisation comes from the session, confirmed against a live membership on every request, not from the URL. Composite foreign keys arrived in M6.
 - **Files/components affected:** `auth/membership.py`, every service and route, migrations, `tests/tenancy/`.
-- **Dependencies:** M7.
 - **Risks:** one missed filter is a data leak → org-required function signatures; automated cross-tenant tests over every route; review checklist; RLS in M16.
 - **Acceptance criteria:**
   - An automated test builds organisations A and B with data. For every v1 route, a user of A requesting B's IDs gets 404.
   - No service query on tenant tables lacks an `organisation_id` filter (review + test).
+
+---
+
+## M8 — Frontend foundation ✅
+
+> Delivered: [milestone-08](milestone-08.md). Pulled forward from M11; the original M8 is now part of M7 above.
+
+- **Objective:** a first customer-facing web app over the authenticated API, usable end to end.
+- **Scope:** React + TypeScript (Vite) app served on the API's origin by nginx; sign-up, sign-in and sign-out on the HttpOnly session cookie; CSV upload with import history and analysis status; dashboard with headline figures, sentiment trend and category breakdown; API types generated from OpenAPI; web image in Docker Compose and CI.
+- **Dependencies:** M7.
+- **Acceptance criteria:**
+  - A new user can sign up → create an organisation → import a CSV → see the dashboard, with no internal tools.
+  - Playwright covers that journey against the real API; no session token is readable by JavaScript.
 
 ---
 
@@ -245,7 +286,7 @@ M0 ─ M1 ─ M2 ─┬─ M3 ─┐
   - Per-organisation API keys: hashed, prefix shown, revocable. This reuses today's constant-time comparison idea.
   - Audit entries.
 - **Files/components affected:** `auth/permissions.py`, `invitations`, `api_keys` tables, member/key routes, tests.
-- **Dependencies:** M8.
+- **Dependencies:** M7 (organisation membership).
 - **Risks:** permission checks scattered around → one `require_role(...)` dependency plus a matrix test.
 - **Acceptance criteria:** a role × endpoint matrix test passes; the last owner cannot be removed; invitation tokens are single-use and expire; a revoked API key is rejected immediately.
 
@@ -261,7 +302,7 @@ M0 ─ M1 ─ M2 ─┬─ M3 ─┐
   - CI/CD: tests → build → push → migrate → deploy staging.
   - Liveness and readiness endpoints (today's health always says "ok"); demo organisation on staging.
 - **Files/components affected:** Dockerfile(s), `docker-compose.yml` (development), `.github/workflows/*`, `DEPLOY.md` / `GCP_DEPLOY_RUNBOOK.md` updated, config.
-- **Dependencies:** M8 (M9 recommended).
+- **Dependencies:** M7 (M9 recommended).
 - **Risks:**
   - Cost → right-size after measuring; memory should drop without in-process FAISS/parquet copies.
   - Model cold starts.
@@ -273,22 +314,25 @@ M0 ─ M1 ─ M2 ─┬─ M3 ─┐
 
 ---
 
-## M11 — Production frontend / dashboard
+## M11 — Production frontend — remaining pages
+
+> The foundation was delivered early as M8: sign-up/login, CSV import with analysis status, and the
+> dashboard's KPIs, sentiment trend and category breakdown. What remains is the rest of this scope.
 
 - **Objective:** the customer-facing web app.
 - **Scope:**
-  - React + TypeScript (Vite) single-page app: sign-up/login, organisation switcher, CSV import with progress, feedback explorer (filters, search), dashboard (KPIs, sentiment trend, category breakdown and trend), categories editor, members page.
+  - React + TypeScript (Vite) single-page app: ~~sign-up/login~~ (M8), organisation switcher, ~~CSV import with progress~~ (M8), feedback explorer (filters, search), dashboard (~~KPIs, sentiment trend, category breakdown~~ (M8) and category trend), categories editor, members page.
   - API client generated from OpenAPI; basic accessibility.
   - The Streamlit pages are the functional spec; Streamlit remains an internal tool.
 - **Files/components affected:** new `web/`; small API additions discovered while building.
-- **Dependencies:** M9, M10.
+- **Dependencies:** M8, M9, M10.
 - **Risks:**
   - New language and tooling → [09](09-learning-map.md), stages 6–7.
   - UI polish scope creep.
   - CSRF with cookie auth → CSRF token pattern from M7.
 - **Acceptance criteria:**
-  - A new user can sign up → create an organisation → import the sample CSV → see the dashboard, with no internal tools.
-  - A Playwright end-to-end test covers that journey.
+  - ✅ (M8) A new user can sign up → create an organisation → import the sample CSV → see the dashboard, with no internal tools.
+  - ✅ (M8) A Playwright end-to-end test covers that journey.
 
 ---
 
