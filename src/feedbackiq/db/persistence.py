@@ -231,6 +231,20 @@ def get_import_batch(
     )
 
 
+def list_import_batches(
+    session: Session, *, organisation_id: uuid.UUID, limit: int = 50
+) -> list[ImportBatch]:
+    """This organisation's imports, newest first. Ordered and limited in SQL."""
+    return list(
+        session.scalars(
+            select(ImportBatch)
+            .where(ImportBatch.organisation_id == organisation_id)
+            .order_by(ImportBatch.created_at.desc())
+            .limit(limit)
+        ).all()
+    )
+
+
 def find_import_batch_by_source_hash(
     session: Session, *, organisation_id: uuid.UUID, source_hash: str
 ) -> ImportBatch | None:

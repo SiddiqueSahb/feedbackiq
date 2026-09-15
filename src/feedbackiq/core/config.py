@@ -129,6 +129,19 @@ class Settings(BaseSettings):
     # How long the worker sleeps when no job is waiting.
     WORKER_POLL_SECONDS: float = 2.0
 
+    # A job still marked `running` after this long is presumed abandoned by a dead worker
+    # and reclaimed (services/maintenance.py). Comfortably longer than any real job: the
+    # slowest measured run - a full import analysed with real models - is minutes, not
+    # tens of minutes. Too low would reclaim work that is still in progress.
+    STALE_JOB_MINUTES: int = 30
+
+    # ---------------------------------------------------------------- analytics API
+
+    # Page size for /api/v1/feedback. The cap is what stops a caller asking for the whole
+    # table in one request.
+    FEEDBACK_PAGE_SIZE: int = 50
+    FEEDBACK_PAGE_SIZE_MAX: int = 200
+
     # ---------------------------------------------------------------- API
 
     # Required in the x-api-key header on every /api/* route except health.
