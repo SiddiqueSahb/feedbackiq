@@ -5,10 +5,18 @@
 Copy `.env.example` to `.env` and fill it in. Two values matter:
 
 - `GROQ_API_KEY` — needed by the chatbot and the LLM business summary.
-- `API_KEY` — the shared secret every `/api/*` route requires in an
+- `API_KEY` — the shared secret the research routes (`/api/sentiment`,
+  `/api/search`, `/api/rag`, `/api/analytics`, `/api/evaluation`) require in an
   `x-api-key` header (`/api/health` and `/` are deliberately open, so
   health checks work without credentials). Leave it blank locally and the
   development default in `src/feedbackiq/core/config.py` is used, with a warning on startup.
+
+Customer data — `/api/v1/*`, `/api/imports`, `/api/jobs` — does **not** accept the API
+key. It needs a signed-in user's session cookie (Milestone 7), and there is no
+authentication secret to configure: the database stores only a hash of each session token.
+A deployed environment must serve the API over HTTPS, because the session cookie is marked
+`Secure` when `ENVIRONMENT=production`, and should set `ALLOWED_ORIGINS` to the frontend's
+URL. See `docs/production/milestone-07.md`.
 
 Set `ENVIRONMENT=production` and the backend **refuses to start** unless
 `API_KEY` is a real value — a deployment quietly running on a key that's

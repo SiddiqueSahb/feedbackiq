@@ -385,8 +385,11 @@ cp .env.example .env
 |---|---|---|
 | `GROQ_API_KEY` | For RAG and summarisation | Groq API credential |
 | `GROQ_MODEL` | No | Generator model. Set `llama-3.1-8b-instant` to reproduce reported results |
-| `API_KEY` | In production | Value expected in the `x-api-key` header |
-| `ENVIRONMENT` | No | `production` makes the backend refuse to start on the development key |
+| `API_KEY` | In production | Value expected in the `x-api-key` header on the research routes (customer data uses sign-in instead) |
+| `ENVIRONMENT` | No | `production` makes the backend refuse to start on the development key, and marks the session cookie `Secure` |
+| `ALLOWED_ORIGINS` | For a browser frontend | Explicit origins may send the session cookie; POSTs from any other origin are refused |
+| `SESSION_TTL_HOURS` | No | How long a sign-in lasts. Defaults to `24` |
+| `SESSION_COOKIE_SECURE` | No | Overrides the `Secure` cookie flag; only for trying production settings over local HTTP |
 | `LOG_LEVEL` | No | Defaults to `WARNING` |
 
 ### Build the artefacts
@@ -459,7 +462,31 @@ Stored model and pipeline metrics, read from data/results/.
 
 ## API endpoints
 
-All `/api/*` routes require an `x-api-key` header. `/` and `/api/health` stay open for load-balancer probes. Interactive documentation at `/docs`.
+Two kinds of route, authenticated differently:
+
+- **Customer routes** work with one organisation's own feedback and need a **signed-in user**. Register or log in and the API sets an `HttpOnly` session cookie; the organisation is always the signed-in user's, and no request can name another.
+- **Research routes** analyse the dissertation corpus and need an **`x-api-key`** header.
+
+`/`, `/api/health` and register / login / logout are open. Interactive documentation at `/docs`.
+
+### Customer API — signed-in user
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/v1/auth/register` | Create an account and a new organisation you own; signs you in |
+| `POST` | `/api/v1/auth/login` | Sign in (sets the session cookie) |
+| `POST` | `/api/v1/auth/logout` | Sign out |
+| `GET` | `/api/v1/auth/me` | The signed-in user, their organisation and role |
+| `POST` | `/api/v1/imports` | Upload a CSV of feedback; analysis is queued for the worker |
+| `GET` | `/api/v1/imports`, `/api/v1/imports/{id}` | Imports and the counts each produced |
+| `GET` | `/api/v1/jobs/{id}` | Background analysis progress |
+| `GET` | `/api/v1/feedback`, `/api/v1/feedback/{id}` | Feedback with its analysis — filter, search, paginate |
+| `GET` | `/api/v1/analytics/summary`, `/trend`, `/categories` | Aggregates computed in PostgreSQL |
+| `GET` | `/api/v1/categories` | Categories available to the organisation |
+
+`POST /api/imports`, `GET /api/imports/{id}` and `GET /api/jobs/{id}` are the earlier ingestion paths, kept and signed-in like the rest.
+
+### Research API — `x-api-key`
 
 | Method | Endpoint | Description |
 |---|---|---|

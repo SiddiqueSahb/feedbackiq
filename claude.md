@@ -34,10 +34,12 @@ architectural specification.
 3. **Small, reviewable changes.** Logical commits, not one large unexplained one.
    Never force-push; never rewrite pushed history.
 4. **Run the tests after every meaningful change:** `pytest` must stay at
-   **382 passed, 2 xfailed** or better (it was 104 passed, 4 xfailed before Milestone 3).
-   Never weaken or delete a test to get green, and never flip a strict `xfail` without
-   documenting why the behaviour changed. The database suite is separate and needs a real
-   PostgreSQL: `pytest tests/integration` (158 tests), not selected by a bare `pytest`.
+   **508 passed, 2 xfailed** or better (382 before Milestone 7; 104 passed, 4 xfailed before
+   Milestone 3). Never weaken or delete a test to get green, and never flip a strict `xfail`
+   without documenting why the behaviour changed. The database suite is separate and needs a
+   real PostgreSQL: `pytest tests/integration` (261 tests), not selected by a bare `pytest`.
+   Gate commits on pytest's exit code explicitly: `set -e` does not stop a chain when
+   `pytest | tail` fails.
 5. **Don't touch dissertation research artefacts** without asking: `notebooks/`,
    `evaluate/`, `scripts/`, `data/`, `models/`, `mlruns/`, `RESULTS.md`. Their results
    must stay reproducible. Import paths may be updated; methodology may not.
@@ -58,8 +60,9 @@ architectural specification.
 ```text
 src/feedbackiq/        the product (installed with `pip install -e .`)
   core/                settings, logging, paths, exceptions
-  api/                 FastAPI app, auth dependency, routes, request/response schemas
-  services/            orchestration between the API and the ML code
+  api/                 FastAPI app, auth dependencies, routes, request/response schemas
+  auth/                credential rules and session tokens: pure functions, no DB, no HTTP
+  services/            orchestration between the API and the ML code (auth.py: accounts, sessions)
   engine/              the analytics engine: typed inputs and results, no HTTP, no SQL
   db/                  models, session, persistence functions, job queue, seed
   ingestion/           CSV parsing and validation: bytes in, typed rows out, no I/O
@@ -89,7 +92,7 @@ docker build -f backend/Dockerfile --output type=cacheonly .   # local export is
 
 docker compose up -d postgres          # PostgreSQL 16 on localhost:55432
 alembic upgrade head                   # create/update the schema
-python -m feedbackiq.db.seed           # dev organisation + the 24 default categories
+python -m feedbackiq.db.seed           # a `dev` organisation + the default categories (no users)
 pytest tests/integration               # needs the database above; fails (not skips) without it
 alembic revision --autogenerate --rev-id 000N -m "what changed"
 
@@ -143,25 +146,26 @@ docker compose up -d postgres worker   # the same worker in a container
 - **Ingestion (Milestone 5B).** `POST /api/imports` validates a CSV, stores organisation-owned
   `feedback`, and queues an `analyse_import` job; the worker runs the engine. Rules:
   - **Never analyse in a request.** The engine runs in the worker, not in the HTTP handler.
-  - **Ownership is explicit**, never inferred from a file, a filename or a CSV column.
-    `services/imports.py::_resolve_organisation` and `api/routes/imports.py::_organisation_id`
-    are the only two places that decide it, and both are the temporary stand-in that
-    authentication replaces.
+  - **Ownership is explicit**, never inferred from a file, a filename or a CSV column, and
+    never defaulted. `import_csv` requires `organisation_id`, which the API takes from
+    `get_current_organisation`. The dev-organisation fallback and `DEV_ORGANISATION_SLUG`
+    were removed in Milestone 7; do not reintroduce a default owner.
   - Whole-file problems raise `IngestionError`; a bad *row* is counted and reported with its
     line number, never silently dropped and never fatal to the upload.
   - Uploaded files are parsed in memory and not kept: the database is the source of truth.
   - **Category identity is `categories.key`**, not the name. Results resolve by key, so a
     display name may be reworded freely; splitting or merging categories may not.
   - API routes open their own session *inside* the handler, after auth — never as a FastAPI
-    dependency, or an unauthenticated request would touch the database and `tests/api` would
-    need PostgreSQL.
+    dependency, or `tests/api` would need PostgreSQL. The one exception is the auth
+    dependency's single session lookup, which runs only for a well-formed cookie: a request
+    with no or malformed credentials never touches the database.
 - **The customer API is `/api/v1` (Milestone 6).** Reads over stored feedback and
   SQL-computed analytics: `feedback` (list/detail), `analytics/summary`, `analytics/trend`,
-  `analytics/categories`, `categories`, `imports`, `jobs/{id}`. Rules:
-  - **Every customer-data query is organisation-scoped**, and the scope comes from
-    `api/deps.py::resolve_organisation_id` — the single temporary stand-in for
-    authentication. Never infer the tenant from a query parameter, header or uploaded file.
-    Milestone 7 replaces that one function.
+  `analytics/categories`, `categories`, `imports` (GET, and POST upload since M7), `jobs/{id}`.
+  Rules:
+  - **Every customer-data query is organisation-scoped**, and the scope comes only from
+    `api/deps.py::get_current_organisation` (Milestone 7, below). Never infer the tenant from
+    a URL, query parameter, body, header or uploaded file.
   - **Filter and aggregate in PostgreSQL**, never by fetching rows into Python.
     `services/feedback.py` and `services/analytics.py` own those queries;
     `services/analytics_service.py` is the old pandas/parquet version and is *not* the model
@@ -169,8 +173,43 @@ docker compose up -d postgres worker   # the same worker in a container
   - Filter by **`category_key`**, never by display name.
   - An unknown id returns **404 scoped to the organisation**, so another tenant's id is
     indistinguishable from one that does not exist.
-  - The dissertation-era `/api/*` routes and `POST /api/imports` are unchanged; Streamlit
-    still uses them.
+  - The dissertation-era research routes (`/api/sentiment`, `/api/search`, `/api/rag`,
+    `/api/analytics`, `/api/evaluation`) keep the API key and Streamlit still uses them.
+    The ingestion routes (`/api/imports`, `/api/jobs`) need a signed-in user since
+    Milestone 7; Streamlit calls neither.
+- **Authentication and tenant enforcement (Milestone 7).** See `docs/production/milestone-07.md`.
+  - **Two kinds of caller.** Research routes: the shared `x-api-key`. Customer data
+    (`/api/v1/*`, `/api/imports`, `/api/jobs`): a server-side session cookie. The API key is
+    never a way into customer data. The only unauthenticated routes are health and
+    register/login/logout, pinned by `PUBLIC_ROUTES` in `tests/api/test_api.py`; adding a
+    public route means editing that set on purpose.
+  - **The organisation comes from one place**: `get_current_organisation`, i.e. the session's
+    organisation confirmed against a live membership, re-checked on every request in one SQL
+    statement (`services/auth.py::resolve_session`). Customer routers are mounted behind it
+    in `main.py`; each handler takes `context: AuthContext = Depends(get_current_organisation)`
+    and passes `context.organisation_id` to its helper. A new customer route does the same.
+  - **Registration always creates a new organisation** with the registrant as owner. It must
+    never attach anyone to an existing organisation; joining one needs invitations (later).
+  - **Credentials.** argon2id via `auth/credentials.py` (argon2-cffi) — never hash by hand.
+    The session token lives only in the `HttpOnly` cookie, never a response body; only its
+    SHA-256 is stored. There is no auth secret, so don't add JWTs or signing without a
+    documented decision. Never log passwords, tokens or email addresses.
+  - **Status codes.** 401 not signed in (one message for every cause); 403 no organisation,
+    a disabled account after the correct password, or a disallowed origin on a POST; 404 for
+    another tenant's id, identical to a missing one; 409 email taken; 422 invalid details —
+    and 422s under `/api/v1/auth` never echo the submitted input.
+  - **Roles** are `owner` and `member` (`MEMBERSHIP_ROLES` + a CHECK). Both have the same
+    data access today; no owner-only route exists yet. Add a role with the tuple plus a
+    migration.
+  - Disable a user with `is_active=false`, which ends their sessions immediately. Deleting a
+    user or organisation cascades to memberships; deleting an organisation sets sessions'
+    `organisation_id` to NULL.
+  - **Tests.** API tests sign in with `app.dependency_overrides[get_current_organisation]`.
+    Any new customer route must be added to `customer_paths` in
+    `tests/integration/test_tenant_isolation_http.py`, which checks that no route leaks the
+    other tenant's identifiers or text. `test_tenant_isolation.py` and the composite foreign
+    keys stay as the lower layers.
+  - The worker still takes the organisation from the job row, never from a request.
 - **Stale jobs** are recovered by `services/maintenance.py` — `running` for longer than
   `STALE_JOB_MINUTES` is requeued (or abandoned once attempts are spent). Run on worker
   startup or via `python -m feedbackiq.worker --reclaim`. Deliberately not on a timer in
