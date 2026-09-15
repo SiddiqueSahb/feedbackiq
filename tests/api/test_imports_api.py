@@ -219,6 +219,22 @@ def test_an_unusable_file_is_422_with_an_actionable_message(client, monkeypatch)
     assert "text" in response.json()["detail"]
 
 
+def test_an_unusable_file_message_is_the_readable_one_without_an_internal_class_name(client, monkeypatch):
+    """Customers read this detail as it is (the web app shows it verbatim). str() of the exception
+    used to prefix it with "[IngestionError] "."""
+    message = "No feedback text column found. Add a column named 'text'."
+
+    def refuse(organisation_id, raw, filename):
+        raise IngestionError(message)
+
+    monkeypatch.setattr(import_routes, "_store_import", refuse)
+
+    response = upload(client, raw=b"name\nAcme\n")
+
+    assert response.status_code == 422
+    assert response.json() == {"detail": message}
+
+
 def test_an_oversized_upload_is_413_and_never_reaches_the_service(client, monkeypatch):
     monkeypatch.setattr(settings, "MAX_UPLOAD_BYTES", 16)
     monkeypatch.setattr(

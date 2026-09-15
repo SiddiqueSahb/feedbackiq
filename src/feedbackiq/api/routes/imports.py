@@ -137,8 +137,10 @@ async def accept_upload(file: UploadFile, organisation_id: uuid.UUID) -> ImportA
         return await asyncio.to_thread(_store_import, organisation_id, raw, file.filename)
 
     except IngestionError as exc:
-        # The file cannot be used at all: a message the customer can act on.
-        raise HTTPException(status_code=422, detail=str(exc))
+        # The file cannot be used at all: a message the customer can act on. `exc.message`, not
+        # str(exc) - FeedBackError's str() prefixes the class name ("[IngestionError] ..."), which
+        # is internal detail a customer should never read.
+        raise HTTPException(status_code=422, detail=exc.message)
 
     except Exception:
         log.exception("Import failed.")
