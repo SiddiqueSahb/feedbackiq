@@ -11,11 +11,12 @@ Ownership classification (documented per table below, and in milestone-04.md):
                   (`categories.organisation_id IS NULL`)
   SYSTEM/INTERNAL the application's own bookkeeping: `jobs` (and, later, migrations'
                   own alembic_version table)
+  IDENTITY        people, not customer data, and deliberately global: `users` (Milestone 7).
+                  One person may belong to several organisations, so a user row carries
+                  no organisation_id.
 
-Everything a future tenant-isolation layer needs is already here - the column, the
-foreign keys, and composite keys that stop one organisation's row referencing another's.
-What is deliberately absent is users, sessions, roles and any authorisation check: those
-are later milestones.
+Everything a tenant-isolation layer needs is here - the column, the foreign keys, and
+composite keys that stop one organisation's row referencing another's.
 """
 
 from __future__ import annotations
@@ -87,6 +88,44 @@ class Organisation(Base):
 
     def __repr__(self) -> str:
         return f"<Organisation {self.slug}>"
+
+
+class User(Base):
+    """
+    A person who can sign in. IDENTITY - global, not tenant-owned.
+
+    No `organisation_id`: which organisations a user may act for is a separate fact, held by
+    memberships, because one person can belong to more than one.
+
+    Two constraints make email identity case-insensitive in the database itself rather than
+    only in application code: the address must be stored already normalised (trimmed and
+    lower-case - see auth/credentials.py), and it must be unique. Together, "Ana@x.com" and
+    "ana@x.com" cannot become two accounts even if a future code path forgets to normalise.
+
+    `password_hash` is an argon2id hash string. The password itself is never stored.
+    """
+
+    __tablename__ = "users"
+    __table_args__ = (
+        UniqueConstraint("email", name="uq_users_email"),
+        CheckConstraint("email = lower(btrim(email))", name="email_normalised"),
+    )
+
+    id: Mapped[uuid.UUID] = uuid_primary_key()
+    # 254: the longest address that can receive mail (RFC 5321).
+    email: Mapped[str] = mapped_column(String(254), nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    # A disabled user cannot sign in, and their existing sessions stop working. Disabling
+    # rather than deleting keeps who-did-what history intact.
+    is_active: Mapped[bool] = mapped_column(nullable=False, default=True, server_default=text("true"))
+    created_at: Mapped[datetime] = created_at_column()
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+    def __repr__(self) -> str:
+        # The id, not the email: reprs end up in logs and tracebacks.
+        return f"<User {self.id}>"
 
 
 class DataSource(Base):

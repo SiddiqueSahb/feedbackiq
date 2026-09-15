@@ -58,3 +58,12 @@ class TaxonomyError(FeedBackError):
     the wrong categories produces results that look correct and are not. See
     core/taxonomy.py and docs/production/milestone-05a.md.
     """
+
+
+class CredentialError(FeedBackError):
+    """
+    An email address or password that breaks the rules, e.g. a password that is too short.
+
+    `message` is written for the person registering and never contains the password, so it
+    is safe to return to a client. See auth/credentials.py.
+    """

@@ -56,6 +56,10 @@ dependencies = [
     # installed in this environment as an undeclared transitive package; declaring it makes
     # the dependency real rather than lucky.
     "python-multipart==0.0.32",
+    # Password hashing (Milestone 7). argon2id through the reference Python binding - hashing
+    # is never implemented by hand. The one new dependency authentication needs: sessions
+    # use the standard library's `secrets` and `hashlib`.
+    "argon2-cffi==25.1.0",
 ]
 
 [project.optional-dependencies]

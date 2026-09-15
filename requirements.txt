@@ -45,6 +45,9 @@ psycopg[binary]==3.2.12
 # FastAPI needs this to parse multipart/form-data at all - without it the CSV upload
 # endpoint fails at import time.
 python-multipart==0.0.32
+# Password hashing (Milestone 7): argon2id. Listed here as well as in pyproject.toml for the
+# same reason as psycopg above - the images install from this file.
+argon2-cffi==25.1.0
 
 # ── Experiment tracking ───────────────────────────────────────────────────────
 mlflow==2.12.1
