@@ -145,6 +145,15 @@ def run_forever(*, poll_seconds: float | None = None, database_url: str | None =
 
     log.info("Worker %s started; polling every %.1fs", worker_id(), interval)
 
+    # Recover anything a previous worker left `running`. Done once at startup rather than on
+    # a timer: a periodic sweep in every process is how two workers reclaim the same job.
+    try:
+        recovered = reclaim(database_url=database_url)
+        if recovered["reclaimed"]:
+            log.warning("Startup reclaim: %s", recovered)
+    except Exception:
+        log.exception("Startup reclaim failed; continuing without it.")
+
     while not _stopping:
         try:
             did_work = process_one(database_url=database_url)
@@ -177,16 +186,38 @@ def _handle_stop(signum: int, frame: FrameType | None) -> None:
     log.info("Signal %s received; stopping after the current job.", signum)
 
 
+def reclaim(*, database_url: str | None = None, older_than_minutes: int | None = None) -> dict:
+    """
+    Recover jobs a dead worker left `running` (services/maintenance.py).
+
+    Called on startup of a long-running worker, so restarting a crashed one picks its own
+    abandoned work back up, and available on its own as `--reclaim`.
+    """
+    from feedbackiq.services.maintenance import reclaim_stale_jobs
+
+    with session_scope(database_url) as session:
+        return reclaim_stale_jobs(session, older_than_minutes=older_than_minutes).as_dict()
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="FeedbackIQ background worker.")
     parser.add_argument("--once", action="store_true", help="claim at most one job, then exit")
     parser.add_argument("--drain", action="store_true", help="run until the queue is empty")
+    parser.add_argument(
+        "--reclaim",
+        action="store_true",
+        help="requeue jobs a dead worker left running, then exit",
+    )
     parser.add_argument("--poll-seconds", type=float, default=None)
     parser.add_argument("--database-url", default=None, help="override settings.DATABASE_URL")
     args = parser.parse_args(argv)
 
     signal.signal(signal.SIGTERM, _handle_stop)
     signal.signal(signal.SIGINT, _handle_stop)
+
+    if args.reclaim:
+        print(reclaim(database_url=args.database_url))
+        return 0
 
     if args.once:
         ran = process_one(database_url=args.database_url)
