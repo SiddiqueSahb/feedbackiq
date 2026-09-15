@@ -51,6 +51,10 @@ RUN_STATUSES = ("queued", "running", "completed", "failed")
 RESULT_STATUSES = ("ok", "failed")
 JOB_STATUSES = ("queued", "running", "succeeded", "failed")
 CATEGORY_SOURCES = ("default", "custom", "discovered")
+# Deliberately small (Milestone 7). owner: everything a member can do, plus managing the
+# organisation's membership once that exists. member: use the organisation's data. More
+# roles (admin, viewer) are one value here plus a migration.
+MEMBERSHIP_ROLES = ("owner", "member")
 
 
 def _one_of(column: str, allowed: tuple[str, ...]) -> str:
@@ -126,6 +130,53 @@ class User(Base):
     def __repr__(self) -> str:
         # The id, not the email: reprs end up in logs and tracebacks.
         return f"<User {self.id}>"
+
+
+class OrganisationMembership(Base):
+    """
+    Which organisations a user may act for, and in what role. The bridge between IDENTITY
+    and TENANT-OWNED data.
+
+        users  1 ── * organisation_memberships * ── 1  organisations
+
+    **This row is the only thing that makes an organisation's data reachable by a signed-in
+    user.** An organisation id sent by a client - in a URL, query, body, header or CSV - is
+    never a substitute for it.
+
+    Roles are a CHECK constraint (MEMBERSHIP_ROLES) rather than a PostgreSQL enum, like the
+    status columns, so a later milestone can add one with a one-line migration.
+
+    Deleting a user or an organisation removes its memberships and leaves the other side
+    alone. "An organisation always keeps an owner" is a rule for service code (it is awkward
+    in SQL); nothing removes memberships yet.
+    """
+
+    __tablename__ = "organisation_memberships"
+    __table_args__ = (
+        # One membership per person per organisation. Leads with user_id, so it also serves
+        # the lookup every authenticated request makes: "what may this user act for?"
+        UniqueConstraint(
+            "user_id", "organisation_id",
+            name="uq_organisation_memberships_user_id_organisation_id",
+        ),
+        CheckConstraint(_one_of("role", MEMBERSHIP_ROLES), name="role_valid"),
+        # "Who belongs to this organisation?" - the other direction.
+        Index("ix_organisation_memberships_organisation_id", "organisation_id"),
+    )
+
+    id: Mapped[uuid.UUID] = uuid_primary_key()
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    organisation_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("organisations.id", ondelete="CASCADE"), nullable=False
+    )
+    # No default: a membership is created with a role chosen on purpose.
+    role: Mapped[str] = mapped_column(String(20), nullable=False)
+    created_at: Mapped[datetime] = created_at_column()
+
+    def __repr__(self) -> str:
+        return f"<OrganisationMembership user={self.user_id} org={self.organisation_id} {self.role}>"
 
 
 class DataSource(Base):
