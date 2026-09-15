@@ -2,11 +2,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { listImports, uploadImport } from "../api/imports";
 import type { ImportSummary } from "../api/types";
+import { ANALYTICS_KEY } from "../dashboard/useAnalytics";
 
 export const IMPORTS_KEY = ["imports"] as const;
-
-/** Everything that shows analysed data, refreshed after an upload (the dashboard, Part 6). */
-export const ANALYTICS_KEY = ["analytics"] as const;
 
 /** How often the import list is re-read while an analysis is still in progress. */
 export const ANALYSIS_POLL_MS = 4000;

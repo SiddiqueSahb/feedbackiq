@@ -18,6 +18,26 @@ const OWNER = {
   organisation: { id: "9b1c0000-0000-0000-0000-000000000001", name: "Acme Ltd", role: "owner" },
 };
 const SIGNED_OUT = { status: 401, body: { detail: "Not signed in." } };
+
+// The dashboard loads its figures as soon as it renders. These tests are about authentication, so
+// they give it an organisation with no feedback yet rather than leaving it on an error screen.
+const DASHBOARD_ROUTES = {
+  "GET /api/v1/analytics/summary": {
+    status: 200,
+    body: {
+      total_feedback: 0,
+      analysed: 0,
+      not_analysed: 0,
+      sentiment_counts: { positive: 0, neutral: 0, negative: 0 },
+      sentiment_percentages: { positive: 0, neutral: 0, negative: 0 },
+      unclassified: 0,
+      unclassified_percentage: 0,
+      average_rating: null,
+      earliest_feedback_at: null,
+      latest_feedback_at: null,
+    },
+  },
+};
 const PASSWORD = "correct horse battery staple";
 
 afterEach(() => {
@@ -31,7 +51,7 @@ function currentSearch(name: string) {
 
 describe("routing by session", () => {
   it("sends a visitor who is not signed in to sign-in, remembering where they were going", async () => {
-    fakeApi({ "GET /api/v1/auth/me": SIGNED_OUT });
+    fakeApi({ ...DASHBOARD_ROUTES, "GET /api/v1/auth/me": SIGNED_OUT });
 
     renderApp("/imports?view=recent");
 
@@ -41,7 +61,7 @@ describe("routing by session", () => {
   });
 
   it("shows the app, and the organisation the API reported, to a signed-in user", async () => {
-    fakeApi({ "GET /api/v1/auth/me": { status: 200, body: OWNER } });
+    fakeApi({ ...DASHBOARD_ROUTES, "GET /api/v1/auth/me": { status: 200, body: OWNER } });
 
     renderApp("/dashboard");
 
@@ -53,7 +73,7 @@ describe("routing by session", () => {
   });
 
   it("opens the dashboard from the root path", async () => {
-    fakeApi({ "GET /api/v1/auth/me": { status: 200, body: OWNER } });
+    fakeApi({ ...DASHBOARD_ROUTES, "GET /api/v1/auth/me": { status: 200, body: OWNER } });
 
     renderApp("/");
 
@@ -62,7 +82,7 @@ describe("routing by session", () => {
   });
 
   it("explains, rather than showing refused pages, when the user belongs to no organisation", async () => {
-    fakeApi({ "GET /api/v1/auth/me": { status: 200, body: { email: "loner@example.com", organisation: null } } });
+    fakeApi({ ...DASHBOARD_ROUTES, "GET /api/v1/auth/me": { status: 200, body: { email: "loner@example.com", organisation: null } } });
 
     renderApp("/dashboard");
 
@@ -72,7 +92,7 @@ describe("routing by session", () => {
   });
 
   it("moves a signed-in user on from the sign-in page", async () => {
-    fakeApi({ "GET /api/v1/auth/me": { status: 200, body: OWNER } });
+    fakeApi({ ...DASHBOARD_ROUTES, "GET /api/v1/auth/me": { status: 200, body: OWNER } });
 
     renderApp("/login?next=%2Fimports");
 
@@ -82,7 +102,7 @@ describe("routing by session", () => {
 
   it("offers a retry, not a sign-in page, when the API cannot answer", async () => {
     let healthy = false;
-    fakeApi({
+    fakeApi({ ...DASHBOARD_ROUTES,
       "GET /api/v1/auth/me": () =>
         healthy ? { status: 200, body: OWNER } : { status: 503, body: { detail: "Service unavailable." } },
     });
@@ -102,7 +122,7 @@ describe("routing by session", () => {
 describe("signing in", () => {
   it("signs in and continues to the page that was asked for", async () => {
     let signedIn = false;
-    const api = fakeApi({
+    const api = fakeApi({ ...DASHBOARD_ROUTES,
       "GET /api/v1/auth/me": () => (signedIn ? { status: 200, body: OWNER } : SIGNED_OUT),
       "POST /api/v1/auth/login": () => {
         signedIn = true;
@@ -126,7 +146,7 @@ describe("signing in", () => {
   });
 
   it("shows the API's message when sign-in is refused, and stays signed out", async () => {
-    fakeApi({
+    fakeApi({ ...DASHBOARD_ROUTES,
       "GET /api/v1/auth/me": SIGNED_OUT,
       "POST /api/v1/auth/login": { status: 401, body: { detail: "Incorrect email or password." } },
     });
@@ -142,7 +162,7 @@ describe("signing in", () => {
   });
 
   it("shows a disabled account's message", async () => {
-    fakeApi({
+    fakeApi({ ...DASHBOARD_ROUTES,
       "GET /api/v1/auth/me": SIGNED_OUT,
       "POST /api/v1/auth/login": { status: 403, body: { detail: "This account has been disabled." } },
     });
@@ -159,7 +179,7 @@ describe("signing in", () => {
   it("never follows a next parameter to another site", async () => {
     const appOrigin = window.location.origin;
     let signedIn = false;
-    fakeApi({
+    fakeApi({ ...DASHBOARD_ROUTES,
       "GET /api/v1/auth/me": () => (signedIn ? { status: 200, body: OWNER } : SIGNED_OUT),
       "POST /api/v1/auth/login": () => {
         signedIn = true;
@@ -181,7 +201,7 @@ describe("signing in", () => {
   it("writes nothing to browser storage while signing in and using the app", async () => {
     const localWrite = vi.spyOn(Storage.prototype, "setItem");
     let signedIn = false;
-    fakeApi({
+    fakeApi({ ...DASHBOARD_ROUTES,
       "GET /api/v1/auth/me": () => (signedIn ? { status: 200, body: OWNER } : SIGNED_OUT),
       "POST /api/v1/auth/login": () => {
         signedIn = true;
@@ -205,7 +225,7 @@ describe("signing in", () => {
 describe("registering", () => {
   it("creates the account and its organisation, then opens the dashboard", async () => {
     let signedIn = false;
-    const api = fakeApi({
+    const api = fakeApi({ ...DASHBOARD_ROUTES,
       "GET /api/v1/auth/me": () => (signedIn ? { status: 200, body: OWNER } : SIGNED_OUT),
       "POST /api/v1/auth/register": () => {
         signedIn = true;
@@ -229,7 +249,7 @@ describe("registering", () => {
   });
 
   it("shows the password rule before anything is submitted", async () => {
-    fakeApi({ "GET /api/v1/auth/me": SIGNED_OUT });
+    fakeApi({ ...DASHBOARD_ROUTES, "GET /api/v1/auth/me": SIGNED_OUT });
 
     renderApp("/register");
 
@@ -237,7 +257,7 @@ describe("registering", () => {
   });
 
   it("shows why registration was refused", async () => {
-    fakeApi({
+    fakeApi({ ...DASHBOARD_ROUTES,
       "GET /api/v1/auth/me": SIGNED_OUT,
       "POST /api/v1/auth/register": { status: 409, body: { detail: "An account with this email already exists." } },
     });
@@ -257,7 +277,7 @@ describe("registering", () => {
 describe("signing out", () => {
   it("ends the session on the server, forgets the user and returns to sign-in", async () => {
     let signedIn = true;
-    const api = fakeApi({
+    const api = fakeApi({ ...DASHBOARD_ROUTES,
       "GET /api/v1/auth/me": () => (signedIn ? { status: 200, body: OWNER } : SIGNED_OUT),
       "POST /api/v1/auth/logout": () => {
         signedIn = false;
@@ -277,7 +297,7 @@ describe("signing out", () => {
   });
 
   it("stays signed in, and says so, if the server could not sign out", async () => {
-    fakeApi({
+    fakeApi({ ...DASHBOARD_ROUTES,
       "GET /api/v1/auth/me": { status: 200, body: OWNER },
       "POST /api/v1/auth/logout": { status: 500, body: { detail: "Could not sign out." } },
     });
