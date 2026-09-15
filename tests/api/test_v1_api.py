@@ -349,8 +349,11 @@ def test_the_openapi_document_describes_the_v1_routes(client):
     """A frontend developer reads this; it should not be empty or unnamed."""
     schema = client.get("/openapi.json").json()
 
-    v1_paths = [path for path in schema["paths"] if path.startswith("/api/v1")]
-    assert len(v1_paths) == 9
+    v1_paths = {path for path in schema["paths"] if path.startswith("/api/v1")}
+    auth_paths = {path for path in v1_paths if path.startswith("/api/v1/auth/")}
+    # Nine customer-data paths (Milestone 6), plus four for signing in (Milestone 7).
+    assert len(v1_paths - auth_paths) == 9
+    assert len(auth_paths) == 4
 
     listing = schema["paths"]["/api/v1/feedback"]["get"]
     assert listing["summary"]

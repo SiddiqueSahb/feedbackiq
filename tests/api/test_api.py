@@ -3,7 +3,8 @@ HTTP contract - feedbackiq.api.main, feedbackiq.api.deps, feedbackiq.api.routes.
 
 Protects:
   * authentication: missing key -> 401, wrong key -> 403, valid key -> accepted,
-    and every /api route except /api/health requires a key
+    and every /api route refuses a caller with no credentials, except an explicit list
+    of public routes (health, and signing up, in and out)
   * validation: invalid requests are rejected with 422 before any service runs
   * error mapping: expected errors -> 422/503, unexpected errors -> 500 without internal details
   * response shapes the Streamlit frontend depends on
@@ -64,15 +65,36 @@ def test_valid_api_key_is_accepted(client):
     }
 
 
-def protected_routes():
+# Public on purpose, and nothing else. Health checks come from load balancers, and signing up,
+# in or out cannot require already being signed in (Milestone 7). Every other route under /api
+# must refuse a caller with no credentials - an API key or a session, depending on the route.
+# Adding a public route means editing this set, deliberately.
+PUBLIC_ROUTES = {
+    ("GET", "/api/health"),
+    ("POST", "/api/v1/auth/register"),
+    ("POST", "/api/v1/auth/login"),
+    ("POST", "/api/v1/auth/logout"),
+}
+
+
+def api_routes():
     for route in app.routes:
-        if isinstance(route, APIRoute) and route.path.startswith("/api") and route.path != "/api/health":
+        if isinstance(route, APIRoute) and route.path.startswith("/api"):
             for method in sorted(route.methods):
                 yield method, route.path
 
 
-@pytest.mark.parametrize("method, path", list(protected_routes()))
-def test_every_api_route_requires_a_key(client, method, path):
+def protected_routes():
+    return [route for route in api_routes() if route not in PUBLIC_ROUTES]
+
+
+def test_every_public_route_exists():
+    """A stale entry would be harmless today and a surprise later."""
+    assert PUBLIC_ROUTES <= set(api_routes())
+
+
+@pytest.mark.parametrize("method, path", protected_routes())
+def test_every_api_route_refuses_a_caller_with_no_credentials(client, method, path):
     assert client.request(method, path).status_code == 401
 
 

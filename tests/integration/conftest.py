@@ -247,3 +247,30 @@ def default_categories(session):
 
     _ensure_default_categories(session)
     session.flush()
+
+
+@pytest.fixture()
+def api_client(database_url, session):
+    """
+    The real FastAPI app, talking to the test database, for tests that go through HTTP.
+
+    Depends on `session`, so the tables are emptied afterwards like any other test - and this
+    fixture's teardown runs first, disposing the app's connection pool before the TRUNCATE.
+    Created without `with`, which skips the startup hook that loads the research corpus.
+    """
+    from fastapi.testclient import TestClient
+
+    from feedbackiq.api.main import app
+    from feedbackiq.core.config import settings
+    from feedbackiq.db.session import get_engine, reset_engine
+
+    previous = settings.DATABASE_URL
+    settings.DATABASE_URL = database_url
+    reset_engine()
+
+    try:
+        yield TestClient(app)
+    finally:
+        get_engine().dispose()
+        reset_engine()
+        settings.DATABASE_URL = previous

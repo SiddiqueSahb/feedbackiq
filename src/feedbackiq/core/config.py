@@ -149,6 +149,15 @@ class Settings(BaseSettings):
     # configure - a session is valid because its row exists (see auth/session_tokens.py).
     SESSION_TTL_HOURS: int = 24
 
+    # The cookie that carries the session token. HttpOnly and SameSite=Lax always (api/v1/auth.py).
+    SESSION_COOKIE_NAME: str = "feedbackiq_session"
+
+    # Whether that cookie is Secure, i.e. only ever sent over HTTPS. Unset (the default) means
+    # "Secure in production, not in development": local development is plain http://localhost,
+    # where a Secure cookie would be dropped. Set it to false only to try a production-like
+    # container over local HTTP - never on a deployed environment, which must be HTTPS.
+    SESSION_COOKIE_SECURE: bool | None = None
+
     # ---------------------------------------------------------------- API
 
     # Required in the x-api-key header on every /api/* route except health.
@@ -178,6 +187,21 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.ENVIRONMENT.strip().lower() == "production"
+
+    @property
+    def session_cookie_secure(self) -> bool:
+        """SESSION_COOKIE_SECURE when set; otherwise Secure exactly when in production."""
+        if self.SESSION_COOKIE_SECURE is None:
+            return self.is_production
+
+        return self.SESSION_COOKIE_SECURE
+
+    @property
+    def allowed_origin_list(self) -> list[str]:
+        """ALLOWED_ORIGINS as a list; ["*"] when empty."""
+        origins = [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",") if origin.strip()]
+
+        return origins or ["*"]
 
     @property
     def categorise_sentiments(self) -> frozenset[str]:

@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class FeedbackItem(BaseModel):
@@ -123,3 +123,48 @@ class Category(BaseModel):
     description: str
     source: str
     organisation_specific: bool = False
+
+
+# ---------------------------------------------------------------- authentication (Milestone 7)
+
+
+class RegisterRequest(BaseModel):
+    """
+    A new account, and the name of the new organisation it will own.
+
+    Unknown fields are refused with 422: there is no way to name an existing organisation, an
+    organisation id or a role here. The length caps are outer limits against huge payloads;
+    the real rules (services/auth.py) produce the specific messages.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    email: str = Field(max_length=320, examples=["ana@example.com"])
+    password: str = Field(max_length=1024, description="12 to 128 characters.")
+    organisation_name: str = Field(max_length=1000, examples=["Acme Ltd"])
+
+
+class LoginRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    email: str = Field(max_length=320, examples=["ana@example.com"])
+    password: str = Field(max_length=1024)
+
+
+class OrganisationContext(BaseModel):
+    """The organisation a signed-in user acts for. Decided by the server, never by the client."""
+
+    id: str
+    name: str
+    role: str = Field(description="owner or member")
+
+
+class CurrentUser(BaseModel):
+    """
+    Who is signed in. `organisation` is null for a user who belongs to no organisation.
+
+    Deliberately no session token: it lives only in the HttpOnly cookie.
+    """
+
+    email: str
+    organisation: OrganisationContext | None = None
