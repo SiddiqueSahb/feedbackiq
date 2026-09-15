@@ -29,13 +29,14 @@ import asyncio
 
 from fastapi import APIRouter, File, HTTPException, UploadFile, status
 
+from feedbackiq.api.deps import resolve_organisation_id
 from feedbackiq.api.schemas import ImportAccepted, ImportSummary, JobSummary
 from feedbackiq.core.config import settings
 from feedbackiq.core.exceptions import IngestionError
 from feedbackiq.core.logging import get_logger
 from feedbackiq.db import jobs as job_queue
 from feedbackiq.db.models import ImportBatch, Job
-from feedbackiq.db.persistence import get_import_batch, get_organisation_by_slug
+from feedbackiq.db.persistence import get_import_batch
 from feedbackiq.db.session import session_scope
 from feedbackiq.services.imports import ImportOutcome, import_csv
 
@@ -213,18 +214,10 @@ def _organisation_id(session):
     """
     Which organisation this request acts for.
 
-    **Temporary.** Until authentication exists, reads are scoped to the seeded development
-    organisation. This is the one function to replace when a request carries a real user.
+    Delegates to `api.deps.resolve_organisation_id`, which is the single temporary stand-in
+    for authentication shared by these routes and /api/v1.
     """
-    organisation = get_organisation_by_slug(session, settings.DEV_ORGANISATION_SLUG)
-
-    if organisation is None:
-        raise HTTPException(
-            status_code=503,
-            detail="No organisation is configured. Seed the database first.",
-        )
-
-    return organisation.id
+    return resolve_organisation_id(session)
 
 
 def _uuid(value: str, label: str):

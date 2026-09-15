@@ -10,6 +10,7 @@ if API_KEY is unset or still the dev default.
 from __future__ import annotations
 
 import secrets
+import uuid  # noqa: F401  (used in the return annotation of resolve_organisation_id)
 
 from fastapi import HTTPException, Security, status
 from fastapi.security import APIKeyHeader
@@ -40,6 +41,33 @@ if not IS_PRODUCTION and settings.API_KEY == DEV_DEFAULT_KEY:
 
 # auto_error=False so we can return our own error message below.
 _api_key_header = APIKeyHeader(name=API_KEY_HEADER, auto_error=False)
+
+
+def resolve_organisation_id(session) -> "uuid.UUID":
+    """
+    Which organisation the current request acts for.
+
+    **The single temporary stand-in for authentication.** Until Milestone 7 there is no user
+    identity, so every request acts for the seeded development organisation. It is
+    deliberately *one* function so that adding real auth means changing one place, and it
+    deliberately ignores anything the caller sends: inferring the tenant from a query
+    parameter, a header or an uploaded file would be a cross-tenant read waiting to happen.
+
+    Called from inside a handler with an open session, never as a FastAPI dependency, so an
+    unauthenticated request never reaches the database.
+    """
+    from feedbackiq.core.config import settings as _settings
+    from feedbackiq.db.persistence import get_organisation_by_slug
+
+    organisation = get_organisation_by_slug(session, _settings.DEV_ORGANISATION_SLUG)
+
+    if organisation is None:
+        raise HTTPException(
+            status_code=503,
+            detail="No organisation is configured. Seed the database first.",
+        )
+
+    return organisation.id
 
 
 async def require_api_key(api_key: str | None = Security(_api_key_header)) -> str:

@@ -19,6 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from feedbackiq.api.deps import require_api_key
+from feedbackiq.api import v1 as api_v1
 from feedbackiq.api.routes import analytics, evaluation, imports, rag, search, sentiment
 from feedbackiq.api.schemas import HealthResponse
 from feedbackiq.services.analytics_service import warm_cache
@@ -119,6 +120,11 @@ app.include_router(evaluation.router, prefix="/api/evaluation", dependencies=pro
 # Ingestion (Milestone 5B). Mounted at /api rather than /api/imports because the router
 # owns both /imports and /jobs - the job is how an import reports its progress.
 app.include_router(imports.router, prefix="/api", dependencies=protected)
+
+# The versioned customer API (Milestone 6): reads over stored customer data, every query
+# scoped to one organisation. The routes above are left alone - the Streamlit tool and the
+# upload endpoint still use them.
+app.include_router(api_v1.router, prefix="/api/v1", dependencies=protected)
 
 
 @app.get("/", tags=["Health"], summary="API root")
