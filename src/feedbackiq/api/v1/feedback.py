@@ -2,7 +2,8 @@
 Reading feedback: /api/v1/feedback
 
 Every filter is applied in PostgreSQL by `services/feedback.py`. The route's job is to
-validate what arrived, hand it over, and map an invalid filter to 422 rather than a 500.
+validate what arrived, hand it over with the signed-in user's organisation, and map an
+invalid filter to 422 rather than a 500.
 """
 
 from __future__ import annotations
@@ -12,13 +13,14 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
-from feedbackiq.api.deps import resolve_organisation_id
+from feedbackiq.api.deps import get_current_organisation
 from feedbackiq.api.v1.schemas import FeedbackDetail, FeedbackItem, FeedbackPage
 from feedbackiq.core.config import settings
 from feedbackiq.core.logging import get_logger
 from feedbackiq.db.session import session_scope
+from feedbackiq.services.auth import AuthContext
 from feedbackiq.services.feedback import (
     FeedbackFilters,
     InvalidFilter,
@@ -59,6 +61,7 @@ async def list_items(
     max_rating: float | None = Query(None, ge=1, le=5),
     sort: Literal["feedback_at", "created_at", "rating"] = "feedback_at",
     order: Literal["desc", "asc"] = "desc",
+    context: AuthContext = Depends(get_current_organisation),
 ) -> FeedbackPage:
 
     filters = FeedbackFilters(
@@ -78,7 +81,7 @@ async def list_items(
 
     try:
         return await asyncio.to_thread(
-            _list, filters, page, page_size, sort, order == "desc"
+            _list, context.organisation_id, filters, page, page_size, sort, order == "desc"
         )
 
     except InvalidFilter as exc:
@@ -97,7 +100,10 @@ async def list_items(
     response_model=FeedbackDetail,
     summary="One piece of feedback",
 )
-async def read_item(feedback_id: str) -> FeedbackDetail:
+async def read_item(
+    feedback_id: str,
+    context: AuthContext = Depends(get_current_organisation),
+) -> FeedbackDetail:
 
     try:
         identifier = uuid.UUID(feedback_id)
@@ -105,7 +111,7 @@ async def read_item(feedback_id: str) -> FeedbackDetail:
         raise HTTPException(status_code=422, detail=f"'{feedback_id}' is not a valid feedback id.")
 
     try:
-        return await asyncio.to_thread(_detail, identifier)
+        return await asyncio.to_thread(_detail, context.organisation_id, identifier)
 
     except HTTPException:
         raise
@@ -119,6 +125,7 @@ async def read_item(feedback_id: str) -> FeedbackDetail:
 
 
 def _list(
+    organisation_id: uuid.UUID,
     filters: FeedbackFilters,
     page: int,
     page_size: int | None,
@@ -126,8 +133,6 @@ def _list(
     descending: bool,
 ) -> FeedbackPage:
     with session_scope() as session:
-        organisation_id = resolve_organisation_id(session)
-
         result = list_feedback(
             session,
             organisation_id=organisation_id,
@@ -148,10 +153,8 @@ def _list(
         )
 
 
-def _detail(feedback_id: uuid.UUID) -> FeedbackDetail:
+def _detail(organisation_id: uuid.UUID, feedback_id: uuid.UUID) -> FeedbackDetail:
     with session_scope() as session:
-        organisation_id = resolve_organisation_id(session)
-
         item = get_feedback(
             session, organisation_id=organisation_id, feedback_id=feedback_id
         )

@@ -240,22 +240,30 @@ def test_an_unknown_organisation_is_refused(session):
         import_csv(session, raw=CSV, organisation_id=uuid.uuid4())
 
 
-def test_without_an_explicit_organisation_the_seeded_development_one_is_used(session):
-    """The documented stand-in until authentication exists."""
-    from feedbackiq.core.config import settings
+def test_an_organisation_must_always_be_named(session):
+    """
+    There is no default owner.
 
-    dev = create_organisation(session, name="Development", slug=settings.DEV_ORGANISATION_SLUG)
-    session.flush()
+    Until Milestone 7 an upload without an organisation went to the seeded development
+    organisation - the documented stand-in for authentication, and what this test used to
+    assert. With real tenants that fallback would put one customer's upload wherever the
+    default pointed, so leaving the organisation out is now an immediate programming error.
+    """
+    with pytest.raises(TypeError, match="organisation_id"):
+        import_csv(session, raw=CSV)
 
-    outcome = import_csv(session, raw=CSV)
+
+def test_a_seeded_development_organisation_is_not_a_catch_all(session):
+    """The seed still creates a `dev` organisation for local use. Its existence must not
+    make an ownerless upload succeed, and nothing may be stored by the failed attempt."""
+    create_organisation(session, name="Development", slug="dev")
     session.commit()
 
-    assert outcome.batch.organisation_id == dev.id
-
-
-def test_a_missing_development_organisation_is_an_actionable_error(session):
-    with pytest.raises(IngestionError, match="db.seed"):
+    with pytest.raises(TypeError):
         import_csv(session, raw=CSV)
+
+    assert count(session, ImportBatch) == 0
+    assert count(session, Feedback) == 0
 
 
 # ---------------------------------------------------------------- file handling

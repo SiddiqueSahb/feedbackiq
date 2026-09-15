@@ -3,8 +3,14 @@ Shared FastAPI dependencies: who is calling, and what they may reach.
 
 Two kinds of caller, two mechanisms:
 
-    research routes   /api/sentiment, /api/search, ...   the shared `x-api-key` header
-    signed-in users   /api/v1/auth/me, ...               a session cookie (Milestone 7)
+    research routes   /api/sentiment, /api/search, /api/rag,        the shared `x-api-key` header
+                      /api/analytics, /api/evaluation
+    customer routes   /api/v1/*, /api/imports, /api/jobs            a signed-in user's session
+                                                                    cookie (Milestone 7)
+
+**Customer data is reachable only through `get_current_organisation`.** It is the single
+place a request acquires an organisation id, and that id comes from the user's session and a
+live membership - never from a URL, query string, body, header or uploaded file.
 
 **API key.** Sent in the `x-api-key` header (not a query parameter, to keep it out of logs)
 and compared with `secrets.compare_digest` to avoid timing leaks. Health/root routes stay open
@@ -19,7 +25,6 @@ cookie is refused before the database is touched.
 from __future__ import annotations
 
 import secrets
-import uuid  # noqa: F401  (used in the return annotation of resolve_organisation_id)
 
 from fastapi import Depends, HTTPException, Request, Security, status
 from fastapi.security import APIKeyCookie, APIKeyHeader
@@ -63,33 +68,6 @@ session_cookie = APIKeyCookie(
 
 # Methods that change something, and so could be forged from another site.
 UNSAFE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
-
-
-def resolve_organisation_id(session) -> "uuid.UUID":
-    """
-    Which organisation the current request acts for.
-
-    **The single temporary stand-in for authentication.** Until Milestone 7 there is no user
-    identity, so every request acts for the seeded development organisation. It is
-    deliberately *one* function so that adding real auth means changing one place, and it
-    deliberately ignores anything the caller sends: inferring the tenant from a query
-    parameter, a header or an uploaded file would be a cross-tenant read waiting to happen.
-
-    Called from inside a handler with an open session, never as a FastAPI dependency, so an
-    unauthenticated request never reaches the database.
-    """
-    from feedbackiq.core.config import settings as _settings
-    from feedbackiq.db.persistence import get_organisation_by_slug
-
-    organisation = get_organisation_by_slug(session, _settings.DEV_ORGANISATION_SLUG)
-
-    if organisation is None:
-        raise HTTPException(
-            status_code=503,
-            detail="No organisation is configured. Seed the database first.",
-        )
-
-    return organisation.id
 
 
 # ---------------------------------------------------------------- signed-in users

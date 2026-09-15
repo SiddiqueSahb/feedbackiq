@@ -12,24 +12,26 @@ open while transformers run.
 Three deliberate properties:
 
 * **No analysis in the request.** The route creates a job; the worker runs the engine.
-* **Sessions open inside the handlers**, not as a FastAPI dependency, so an unauthenticated
-  request never touches the database - and the API test suite can import this module with no
-  PostgreSQL running.
-* **Ownership is explicit.** Every row is written against an organisation resolved by the
-  application layer, never inferred from the file. See services/imports.py.
+* **Sessions open inside the handlers**, not as a FastAPI dependency, so a request refused at
+  authentication never touches the database - and the API test suite can import this module
+  with no PostgreSQL running.
+* **Ownership comes from the signed-in user.** Every row is written against the organisation
+  of the user's session and membership (api/deps.py::get_current_organisation), never inferred
+  from the file and never defaulted.
 
-**No authentication yet**: these routes are protected by the single shared API key like every
-other route, and they act for the development organisation. Milestone 7/8 replace that with a
-real user and tenant scope.
+**Authentication (Milestone 7):** these routes need a signed-in user, not the shared API key -
+they read and write customer data. `POST /api/v1/imports` is the same upload, sharing
+`accept_upload` below.
 """
 
 from __future__ import annotations
 
 import asyncio
+import uuid
 
-from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
-from feedbackiq.api.deps import resolve_organisation_id
+from feedbackiq.api.deps import get_current_organisation
 from feedbackiq.api.schemas import ImportAccepted, ImportSummary, JobSummary
 from feedbackiq.core.config import settings
 from feedbackiq.core.exceptions import IngestionError
@@ -38,11 +40,19 @@ from feedbackiq.db import jobs as job_queue
 from feedbackiq.db.models import ImportBatch, Job
 from feedbackiq.db.persistence import get_import_batch
 from feedbackiq.db.session import session_scope
+from feedbackiq.services.auth import AuthContext
 from feedbackiq.services.imports import ImportOutcome, import_csv
 
 router = APIRouter(tags=["Imports"])
 
 log = get_logger("api.imports")
+
+UPLOAD_DESCRIPTION = (
+    "Validates the file, stores the valid rows for the signed-in user's organisation and "
+    "queues analysis. Requires a `text` column; `external_id`, `created_at`, `rating` and "
+    "`platform` are optional. Rejected rows are reported per row and do not stop the import. "
+    "Re-uploading an identical file creates nothing and returns the original import."
+)
 
 
 @router.post(
@@ -50,40 +60,14 @@ log = get_logger("api.imports")
     response_model=ImportAccepted,
     status_code=status.HTTP_201_CREATED,
     summary="Upload a CSV of customer feedback",
-    description=(
-        "Validates the file, stores the valid rows and queues analysis. Requires a `text` "
-        "column; `external_id`, `created_at`, `rating` and `platform` are optional. Rejected "
-        "rows are reported per row and do not stop the import. Re-uploading an identical "
-        "file creates nothing and returns the original import."
-    ),
+    description=UPLOAD_DESCRIPTION,
 )
-async def create_import(file: UploadFile = File(...)) -> ImportAccepted:
+async def create_import(
+    file: UploadFile = File(...),
+    context: AuthContext = Depends(get_current_organisation),
+) -> ImportAccepted:
 
-    # Read at most one byte beyond the limit: an oversized upload is refused without being
-    # held in memory in full.
-    raw = await file.read(settings.MAX_UPLOAD_BYTES + 1)
-
-    if len(raw) > settings.MAX_UPLOAD_BYTES:
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=(
-                f"The file is larger than the "
-                f"{settings.MAX_UPLOAD_BYTES // 1_048_576} MB limit."
-            ),
-        )
-
-    log.info("POST /imports | filename=%s | bytes=%d", file.filename, len(raw))
-
-    try:
-        return await asyncio.to_thread(_store_import, raw, file.filename)
-
-    except IngestionError as exc:
-        # The file cannot be used at all: a message the customer can act on.
-        raise HTTPException(status_code=422, detail=str(exc))
-
-    except Exception:
-        log.exception("Import failed.")
-        raise HTTPException(status_code=500, detail="Import failed.")
+    return await accept_upload(file, context.organisation_id)
 
 
 @router.get(
@@ -91,10 +75,13 @@ async def create_import(file: UploadFile = File(...)) -> ImportAccepted:
     response_model=ImportSummary,
     summary="Status and counts for one import",
 )
-async def read_import(import_id: str) -> ImportSummary:
+async def read_import(
+    import_id: str,
+    context: AuthContext = Depends(get_current_organisation),
+) -> ImportSummary:
 
     try:
-        return await asyncio.to_thread(_read_import, import_id)
+        return await asyncio.to_thread(_read_import, context.organisation_id, import_id)
 
     except HTTPException:
         raise
@@ -109,10 +96,13 @@ async def read_import(import_id: str) -> ImportSummary:
     response_model=JobSummary,
     summary="Status of a background job",
 )
-async def read_job(job_id: str) -> JobSummary:
+async def read_job(
+    job_id: str,
+    context: AuthContext = Depends(get_current_organisation),
+) -> JobSummary:
 
     try:
-        return await asyncio.to_thread(_read_job, job_id)
+        return await asyncio.to_thread(_read_job, context.organisation_id, job_id)
 
     except HTTPException:
         raise
@@ -122,21 +112,55 @@ async def read_job(job_id: str) -> JobSummary:
         raise HTTPException(status_code=500, detail="Could not read the job.")
 
 
+# ---------------------------------------------------------------- the upload, shared with /api/v1
+
+
+async def accept_upload(file: UploadFile, organisation_id: uuid.UUID) -> ImportAccepted:
+    """Read the upload within the size limit, store it for `organisation_id`, map errors."""
+
+    # Read at most one byte beyond the limit: an oversized upload is refused without being
+    # held in memory in full.
+    raw = await file.read(settings.MAX_UPLOAD_BYTES + 1)
+
+    if len(raw) > settings.MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=(
+                f"The file is larger than the "
+                f"{settings.MAX_UPLOAD_BYTES // 1_048_576} MB limit."
+            ),
+        )
+
+    log.info("POST imports | filename=%s | bytes=%d", file.filename, len(raw))
+
+    try:
+        return await asyncio.to_thread(_store_import, organisation_id, raw, file.filename)
+
+    except IngestionError as exc:
+        # The file cannot be used at all: a message the customer can act on.
+        raise HTTPException(status_code=422, detail=str(exc))
+
+    except Exception:
+        log.exception("Import failed.")
+        raise HTTPException(status_code=500, detail="Import failed.")
+
+
 # ---------------------------------------------------------------- blocking work
 
 
-def _store_import(raw: bytes, filename: str | None) -> ImportAccepted:
+def _store_import(organisation_id: uuid.UUID, raw: bytes, filename: str | None) -> ImportAccepted:
     with session_scope() as session:
-        outcome = import_csv(session, raw=raw, filename=filename)
+        outcome = import_csv(
+            session, organisation_id=organisation_id, raw=raw, filename=filename
+        )
 
         return _import_accepted(outcome)
 
 
-def _read_import(import_id: str) -> ImportSummary:
+def _read_import(organisation_id: uuid.UUID, import_id: str) -> ImportSummary:
     identifier = _uuid(import_id, "import")
 
     with session_scope() as session:
-        organisation_id = _organisation_id(session)
         batch = get_import_batch(
             session, organisation_id=organisation_id, import_batch_id=identifier
         )
@@ -149,11 +173,10 @@ def _read_import(import_id: str) -> ImportSummary:
         return _import_summary(batch)
 
 
-def _read_job(job_id: str) -> JobSummary:
+def _read_job(organisation_id: uuid.UUID, job_id: str) -> JobSummary:
     identifier = _uuid(job_id, "job")
 
     with session_scope() as session:
-        organisation_id = _organisation_id(session)
         job = job_queue.get_job(session, identifier, organisation_id=organisation_id)
 
         if job is None:
@@ -210,19 +233,7 @@ def _job_summary(job: Job) -> JobSummary:
     )
 
 
-def _organisation_id(session):
-    """
-    Which organisation this request acts for.
-
-    Delegates to `api.deps.resolve_organisation_id`, which is the single temporary stand-in
-    for authentication shared by these routes and /api/v1.
-    """
-    return resolve_organisation_id(session)
-
-
-def _uuid(value: str, label: str):
-    import uuid
-
+def _uuid(value: str, label: str) -> uuid.UUID:
     try:
         return uuid.UUID(value)
     except ValueError:

@@ -1,8 +1,8 @@
 """
 Importing a customer's CSV.
 
-    import_csv(session, raw=..., filename=...)
-        ├─ resolve the owning organisation        (explicit, never inferred from the file)
+    import_csv(session, organisation_id=..., raw=..., filename=...)
+        ├─ resolve the owning organisation        (always given; never inferred or defaulted)
         ├─ recognise an identical re-upload       (SHA-256 of the bytes)
         ├─ validate rows                          (ingestion/csv_reader.py)
         ├─ drop rows this organisation already has
@@ -41,7 +41,6 @@ from feedbackiq.db.persistence import (
     finish_import_batch,
     find_import_batch_by_source_hash,
     get_data_source_by_name,
-    get_organisation_by_slug,
     save_feedback,
     start_import_batch,
 )
@@ -81,13 +80,16 @@ class ImportOutcome:
 def import_csv(
     session: Session,
     *,
+    organisation_id: uuid.UUID,
     raw: bytes,
     filename: str | None = None,
-    organisation_id: uuid.UUID | None = None,
     queue_analysis: bool = True,
 ) -> ImportOutcome:
     """
-    Validate and store a CSV, then queue its analysis.
+    Validate and store a CSV for `organisation_id`, then queue its analysis.
+
+    The organisation is required. In the API it is the signed-in user's organisation
+    (api/deps.py::get_current_organisation); there is no default to fall back on.
 
     Raises `IngestionError` when the file as a whole is unusable (too large, unreadable, no
     text column). Individual bad rows are *not* errors: they are counted, reported on the
@@ -205,28 +207,19 @@ def import_csv(
 # ---------------------------------------------------------------- ownership
 
 
-def _resolve_organisation(session: Session, organisation_id: uuid.UUID | None) -> Organisation:
+def _resolve_organisation(session: Session, organisation_id: uuid.UUID) -> Organisation:
     """
-    Whose data this is.
+    Whose data this is: the organisation the caller names, which must exist.
 
-    **Temporary mechanism.** With no authentication yet, the application layer names the
-    organisation: an explicit id, or the seeded development organisation. It is never
-    inferred from the filename, the CSV contents or anything else a caller controls.
-    Milestone 7/8 replace this with the authenticated user's organisation, and this function
-    is the single place that has to change.
+    Never inferred from the filename, the CSV contents or anything else in the upload, and
+    never defaulted. Until Milestone 7 an upload with no organisation went to the seeded
+    development organisation; that fallback is gone, because on a multi-tenant system "no
+    organisation given" must fail, not quietly land the data somewhere.
     """
-    if organisation_id is not None:
-        organisation = session.get(Organisation, organisation_id)
-        if organisation is None:
-            raise IngestionError(f"No organisation {organisation_id}.")
-        return organisation
+    organisation = session.get(Organisation, organisation_id)
 
-    organisation = get_organisation_by_slug(session, settings.DEV_ORGANISATION_SLUG)
     if organisation is None:
-        raise IngestionError(
-            f"No organisation '{settings.DEV_ORGANISATION_SLUG}' exists. "
-            "Run: python -m feedbackiq.db.seed"
-        )
+        raise IngestionError(f"No organisation {organisation_id}.")
 
     return organisation
 

@@ -9,15 +9,17 @@ headline figure and the list behind it always agree about what was counted.
 from __future__ import annotations
 
 import asyncio
+import uuid
 from datetime import datetime
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
-from feedbackiq.api.deps import resolve_organisation_id
+from feedbackiq.api.deps import get_current_organisation
 from feedbackiq.api.v1.schemas import AnalyticsSummary, Category, CategoryStat, TrendPoint
 from feedbackiq.core.logging import get_logger
 from feedbackiq.db.session import session_scope
+from feedbackiq.services.auth import AuthContext
 from feedbackiq.services.analytics import (
     available_categories,
     category_breakdown,
@@ -63,11 +65,13 @@ async def read_summary(
     platform: str | None = None,
     date_from: datetime | None = None,
     date_to: datetime | None = None,
+    context: AuthContext = Depends(get_current_organisation),
 ) -> AnalyticsSummary:
 
     log.info("GET /v1/analytics/summary")
 
     return await _run(
+        context.organisation_id,
         summary,
         _filters(sentiment, category_key, platform, date_from, date_to),
         AnalyticsSummary,
@@ -92,6 +96,7 @@ async def read_trend(
     platform: str | None = None,
     date_from: datetime | None = None,
     date_to: datetime | None = None,
+    context: AuthContext = Depends(get_current_organisation),
 ) -> list[TrendPoint]:
 
     log.info("GET /v1/analytics/trend | interval=%s", interval)
@@ -99,7 +104,7 @@ async def read_trend(
     filters = _filters(sentiment, category_key, platform, date_from, date_to)
 
     try:
-        return await asyncio.to_thread(_trend, interval, filters)
+        return await asyncio.to_thread(_trend, context.organisation_id, interval, filters)
 
     except InvalidFilter as exc:
         raise HTTPException(status_code=422, detail=str(exc))
@@ -128,6 +133,7 @@ async def read_category_breakdown(
     platform: str | None = None,
     date_from: datetime | None = None,
     date_to: datetime | None = None,
+    context: AuthContext = Depends(get_current_organisation),
 ) -> list[CategoryStat]:
 
     log.info("GET /v1/analytics/categories")
@@ -135,7 +141,7 @@ async def read_category_breakdown(
     filters = _filters(sentiment, None, platform, date_from, date_to)
 
     try:
-        return await asyncio.to_thread(_categories, filters)
+        return await asyncio.to_thread(_categories, context.organisation_id, filters)
 
     except InvalidFilter as exc:
         raise HTTPException(status_code=422, detail=str(exc))
@@ -158,12 +164,14 @@ async def read_category_breakdown(
         "reports them if historical results reference them."
     ),
 )
-async def read_categories() -> list[Category]:
+async def read_categories(
+    context: AuthContext = Depends(get_current_organisation),
+) -> list[Category]:
 
     log.info("GET /v1/categories")
 
     try:
-        return await asyncio.to_thread(_available)
+        return await asyncio.to_thread(_available, context.organisation_id)
 
     except HTTPException:
         raise
@@ -176,9 +184,9 @@ async def read_categories() -> list[Category]:
 # ---------------------------------------------------------------- blocking work
 
 
-async def _run(function, filters: FeedbackFilters, model, error: str):
+async def _run(organisation_id: uuid.UUID, function, filters: FeedbackFilters, model, error: str):
     try:
-        return await asyncio.to_thread(_scoped, function, filters, model)
+        return await asyncio.to_thread(_scoped, organisation_id, function, filters, model)
 
     except InvalidFilter as exc:
         raise HTTPException(status_code=422, detail=str(exc))
@@ -191,16 +199,13 @@ async def _run(function, filters: FeedbackFilters, model, error: str):
         raise HTTPException(status_code=500, detail=error)
 
 
-def _scoped(function, filters: FeedbackFilters, model):
+def _scoped(organisation_id: uuid.UUID, function, filters: FeedbackFilters, model):
     with session_scope() as session:
-        organisation_id = resolve_organisation_id(session)
-
         return model(**function(session, organisation_id=organisation_id, filters=filters))
 
 
-def _trend(interval: str, filters: FeedbackFilters) -> list[TrendPoint]:
+def _trend(organisation_id: uuid.UUID, interval: str, filters: FeedbackFilters) -> list[TrendPoint]:
     with session_scope() as session:
-        organisation_id = resolve_organisation_id(session)
         rows = sentiment_trend(
             session, organisation_id=organisation_id, interval=interval, filters=filters
         )
@@ -208,18 +213,15 @@ def _trend(interval: str, filters: FeedbackFilters) -> list[TrendPoint]:
         return [TrendPoint(**row) for row in rows]
 
 
-def _categories(filters: FeedbackFilters) -> list[CategoryStat]:
+def _categories(organisation_id: uuid.UUID, filters: FeedbackFilters) -> list[CategoryStat]:
     with session_scope() as session:
-        organisation_id = resolve_organisation_id(session)
         rows = category_breakdown(session, organisation_id=organisation_id, filters=filters)
 
         return [CategoryStat(**row) for row in rows]
 
 
-def _available() -> list[Category]:
+def _available(organisation_id: uuid.UUID) -> list[Category]:
     with session_scope() as session:
-        organisation_id = resolve_organisation_id(session)
-
         return [
             Category(**row)
             for row in available_categories(session, organisation_id=organisation_id)

@@ -115,10 +115,9 @@ class Settings(BaseSettings):
     # The data source every CSV upload is attributed to, per organisation.
     IMPORT_SOURCE_NAME: str = "CSV upload"
 
-    # **Temporary, until authentication exists.** Uploads are attributed to this
-    # organisation when the caller does not name one. Milestone 7/8 replace this with the
-    # authenticated user's organisation; nothing else may infer ownership.
-    DEV_ORGANISATION_SLUG: str = "dev"
+    # There is no default organisation. Until Milestone 7, DEV_ORGANISATION_SLUG named one that
+    # received every upload and every read; the organisation now comes only from the signed-in
+    # user's membership (api/deps.py::get_current_organisation).
 
     # ---------------------------------------------------------------- background worker
 

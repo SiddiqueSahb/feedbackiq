@@ -20,7 +20,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from feedbackiq.api.deps import require_api_key
+from feedbackiq.api.deps import get_current_organisation, require_api_key
 from feedbackiq.api import v1 as api_v1
 from feedbackiq.api.routes import analytics, evaluation, imports, rag, search, sentiment
 from feedbackiq.api.v1.auth import router as auth_router
@@ -146,18 +146,22 @@ app.include_router(rag.router, prefix="/api/rag", dependencies=protected)
 app.include_router(analytics.router, prefix="/api/analytics", dependencies=protected)
 app.include_router(evaluation.router, prefix="/api/evaluation", dependencies=protected)
 
+# Customer data (Milestone 7): a signed-in user, acting for the organisation of their session
+# and membership - not the shared API key. Attached at router level for the same reason as
+# the key above: a new customer route is protected by default. Each handler also receives the
+# same dependency to read the organisation from; FastAPI resolves it once per request.
+customer = [Depends(get_current_organisation)]
+
 # Ingestion (Milestone 5B). Mounted at /api rather than /api/imports because the router
 # owns both /imports and /jobs - the job is how an import reports its progress.
-app.include_router(imports.router, prefix="/api", dependencies=protected)
+app.include_router(imports.router, prefix="/api", dependencies=customer)
 
-# Signing up, in and out (Milestone 7). Mounted without the API key: these routes are how a
-# person gets a session in the first place. /auth/me requires that session instead.
+# Signing up, in and out (Milestone 7). Mounted without either: these routes are how a
+# person gets a session in the first place. /auth/me requires that session itself.
 app.include_router(auth_router, prefix="/api/v1")
 
-# The versioned customer API (Milestone 6): reads over stored customer data, every query
-# scoped to one organisation. The routes above are left alone - the Streamlit tool and the
-# upload endpoint still use them.
-app.include_router(api_v1.router, prefix="/api/v1", dependencies=protected)
+# The versioned customer API (Milestone 6), every query scoped to one organisation.
+app.include_router(api_v1.router, prefix="/api/v1", dependencies=customer)
 
 
 @app.get("/", tags=["Health"], summary="API root")
