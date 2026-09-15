@@ -114,10 +114,75 @@ decision per affected key.
 5. **Only then** consider per-organisation taxonomies (the schema already supports them:
    `categories.organisation_id`).
 
-## Why nothing changed in this milestone
+## Why nothing changed in Milestone 5B
 
 Renaming categories is a product decision with a measurable effect on categorisation
-quality, and the brief for 5B was explicit that names must not change here. The correctness
+quality, and the brief for 5B was explicit that names must not change there. The correctness
 problem — the engine and the seed disagreeing, and a silent 7-category fallback — was fixed
-in 5A. The *suitability* problem is this document, and it needs approval plus a benchmark
+in 5A. The *suitability* problem is this document, and it needed approval plus a benchmark
 run, not a quiet edit.
+
+---
+
+# Decision (Milestone 6)
+
+**A product taxonomy of 13 categories was designed and adopted as the default. The research
+taxonomy is retained, not replaced.** Full detail and measurements in
+[milestone-06.md](milestone-06.md).
+
+| | Research taxonomy | Product taxonomy |
+|---|---|---|
+| Identity | `complaint-24`, version **1.1.0** | `product-13`, version **2.0.0** |
+| File | `core/default_categories.json` (kept) | `core/product_categories.json` |
+| Loader | `load_dissertation_taxonomy()` | `load_default_taxonomy()` — the engine default |
+| Database | 24 rows, `source='discovered'`, `is_active=false` | 13 rows, `source='default'`, `is_active=true` |
+| Purpose | published research evidence; historical results resolve to these rows | what customers are categorised against |
+
+The 13 categories: Product Quality & Performance, Not As Described, Delivery & Fulfilment,
+Wait Times & Delays, Service Quality, Support Responsiveness, Billing & Payments, Pricing &
+Value, Refunds & Returns, Account & Access, App & Technical Issues, Booking & Scheduling,
+Facilities & Environment.
+
+## What the measurements showed
+
+Same 199-review stratified sample of negative/neutral corpus reviews, same models, same 0.35
+threshold:
+
+| | Research 1.1.0 | Product 2.0.0 |
+|---|---|---|
+| Unclassified | 17.6% | **17.1%** |
+| Categories ever chosen | 17 of 24 (**7 never**) | **13 of 13** |
+| Largest single category | **37.7%** | **20.1%** |
+| Mean top score | 0.533 | **0.572** |
+| Worst description-pair similarity | 0.720 | **0.613** |
+
+The decisive result is **distribution**, not coverage: coverage is a wash, but the research
+taxonomy leaves seven categories unused and funnels 38% of everything into *Product
+Performance Failures*, while the product taxonomy uses all thirteen and its largest bucket is
+half that size. A dashboard axis where one bucket holds 38% and seven are always empty is not
+useful, whatever its accuracy.
+
+**Accuracy was not measured, because it cannot be.** `manual_validation.csv` has the right
+columns for ground truth and **0 of 100 rows filled in** — a template that was never
+completed. There is no category-labelled data in this repository, so no honest accuracy
+figure exists for either taxonomy.
+
+## What was rejected
+
+- **Renaming in place.** Would have left stored results pointing at categories whose meaning
+  had changed.
+- **Deleting the research rows.** `analysis_results.category_id` is `ON DELETE SET NULL`, so
+  deleting them would have silently blanked historical categories.
+- **An "Other" catch-all.** The 0.35 threshold already yields "Unclassified / Emerging
+  Complaint"; an Other bucket would absorb weak matches and destroy the emerging-issue signal.
+- **A fourth wording iteration.** Three were run; the remaining miss is documented below
+  rather than chased.
+
+## Still open
+
+- `spray_bottle_continuous_spray_dryer_diffuser_fit_dryer` was **not** renamed. It is now
+  retired and inactive, so no customer sees it, and renaming a retired row buys nothing.
+- One canonical scenario still misses: *"still waiting for my refund three weeks after
+  returning the item"* scores 0.28 against **Refunds & Returns** and comes back unclassified.
+- Per-organisation taxonomies remain unbuilt (the schema supports them:
+  `categories.organisation_id`, and an organisation's key shadows a default).

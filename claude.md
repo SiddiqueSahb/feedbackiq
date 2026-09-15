@@ -34,10 +34,10 @@ architectural specification.
 3. **Small, reviewable changes.** Logical commits, not one large unexplained one.
    Never force-push; never rewrite pushed history.
 4. **Run the tests after every meaningful change:** `pytest` must stay at
-   **330 passed, 2 xfailed** or better (it was 104 passed, 4 xfailed before Milestone 3).
+   **382 passed, 2 xfailed** or better (it was 104 passed, 4 xfailed before Milestone 3).
    Never weaken or delete a test to get green, and never flip a strict `xfail` without
    documenting why the behaviour changed. The database suite is separate and needs a real
-   PostgreSQL: `pytest tests/integration` (97 tests), not selected by a bare `pytest`.
+   PostgreSQL: `pytest tests/integration` (158 tests), not selected by a bare `pytest`.
 5. **Don't touch dissertation research artefacts** without asking: `notebooks/`,
    `evaluate/`, `scripts/`, `data/`, `models/`, `mlruns/`, `RESULTS.md`. Their results
    must stay reproducible. Import paths may be updated; methodology may not.
@@ -111,11 +111,27 @@ docker compose up -d postgres worker   # the same worker in a container
 - **The engine must never import SQLAlchemy, psycopg, Alembic or `feedbackiq.db`.** The
   engine returns typed results; `db/persistence.py` stores them. Enforced by
   `tests/integration/test_engine_db_boundary.py`.
-- **The taxonomy has exactly one canonical source:**
-  `src/feedbackiq/core/default_categories.json`, read through `core/taxonomy.py` (stdlib
-  only, no `core.config` import, so it works in a bare container). The engine default, the
-  database seed and `nlp/categoriser.py` all read it — **24 categories**. It is versioned
-  (`taxonomy_version`) and the version reaches stored results through the engine manifest.
+- **Two taxonomies, one default.** Both are packaged and read through `core/taxonomy.py`
+  (stdlib only, no `core.config` import, so they work in a bare container):
+  - **Product taxonomy — the default.** `core/product_categories.json`, `product-13`,
+    version **2.0.0**, **13 customer-facing categories**. `load_default_taxonomy()` returns
+    it; the engine, the seed and `nlp/categoriser.py` all use it.
+  - **Research taxonomy — retained, not the default.** `core/default_categories.json`,
+    `complaint-24`, version 1.1.0. `load_dissertation_taxonomy()` returns it. Its 24 rows
+    stay in the `categories` table marked `source='discovered'`, `is_active=false`, because
+    analysis produced before Milestone 6 points at them. **Never delete them**:
+    `analysis_results.category_id` is `ON DELETE SET NULL`, so deleting would blank history.
+  - The product taxonomy **may evolve independently of the dissertation**. The dissertation
+    taxonomy is research evidence and does not constrain product design (Milestone 6).
+  - A taxonomy change needs evidence. Accuracy cannot be measured — there is no
+    category-labelled data — so judge coverage, distribution (how many categories are ever
+    chosen, how large the biggest bucket is), description distinctness and face validity on
+    business scenarios. See `docs/production/taxonomy-product-review.md`.
+  - `migrations/versions/0003_product_taxonomy.py` **duplicates the 13 categories
+    deliberately** — a migration must not import today's loader. If you edit the packaged
+    file, edit the migration too; a test asserts they match.
+  - Versions reach stored results through the engine manifest (`taxonomy_id`,
+    `taxonomy_version`, `taxonomy_source`).
   - **Never add a fallback taxonomy.** A missing or invalid file raises `TaxonomyError`.
     The 7-category `_STATIC_FALLBACK` was deleted in Milestone 5A because it silently
     produced wrong categories wherever gitignored `data/` was absent (CI, the container
@@ -139,4 +155,23 @@ docker compose up -d postgres worker   # the same worker in a container
   - API routes open their own session *inside* the handler, after auth — never as a FastAPI
     dependency, or an unauthenticated request would touch the database and `tests/api` would
     need PostgreSQL.
-- Beyond ingestion, nothing in the API reads or writes the database yet.
+- **The customer API is `/api/v1` (Milestone 6).** Reads over stored feedback and
+  SQL-computed analytics: `feedback` (list/detail), `analytics/summary`, `analytics/trend`,
+  `analytics/categories`, `categories`, `imports`, `jobs/{id}`. Rules:
+  - **Every customer-data query is organisation-scoped**, and the scope comes from
+    `api/deps.py::resolve_organisation_id` — the single temporary stand-in for
+    authentication. Never infer the tenant from a query parameter, header or uploaded file.
+    Milestone 7 replaces that one function.
+  - **Filter and aggregate in PostgreSQL**, never by fetching rows into Python.
+    `services/feedback.py` and `services/analytics.py` own those queries;
+    `services/analytics_service.py` is the old pandas/parquet version and is *not* the model
+    to copy. Tests assert statement counts, so a stray N+1 fails.
+  - Filter by **`category_key`**, never by display name.
+  - An unknown id returns **404 scoped to the organisation**, so another tenant's id is
+    indistinguishable from one that does not exist.
+  - The dissertation-era `/api/*` routes and `POST /api/imports` are unchanged; Streamlit
+    still uses them.
+- **Stale jobs** are recovered by `services/maintenance.py` — `running` for longer than
+  `STALE_JOB_MINUTES` is requeued (or abandoned once attempts are spent). Run on worker
+  startup or via `python -m feedbackiq.worker --reclaim`. Deliberately not on a timer in
+  every worker.
