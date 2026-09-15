@@ -62,8 +62,22 @@ class TaxonomyError(FeedBackError):
 
 class CredentialError(FeedBackError):
     """
-    An email address or password that breaks the rules, e.g. a password that is too short.
+    A registration detail that breaks the rules: an invalid email address, a password that is
+    too short, a blank organisation name.
 
     `message` is written for the person registering and never contains the password, so it
-    is safe to return to a client. See auth/credentials.py.
+    is safe to return to a client. See auth/credentials.py and services/auth.py.
+    """
+
+
+class AccountExistsError(FeedBackError):
+    """Registration with an email address that already has an account."""
+
+
+class AccountDisabledError(FeedBackError):
+    """
+    The correct password for an account that has been disabled.
+
+    Raised only *after* the password verifies, so it tells nobody anything they could not
+    already find out by signing in. Every other failed sign-in is indistinguishable.
     """

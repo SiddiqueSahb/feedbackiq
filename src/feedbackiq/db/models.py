@@ -179,6 +179,49 @@ class OrganisationMembership(Base):
         return f"<OrganisationMembership user={self.user_id} org={self.organisation_id} {self.role}>"
 
 
+class UserSession(Base):
+    """
+    A signed-in browser. IDENTITY - global, like `users`.
+
+    Server-side sessions: the cookie carries a random token, and this row is what makes that
+    token mean something. Signing out, or cutting off a stolen session, is deleting the row -
+    something a self-contained token such as a JWT cannot offer before it expires.
+
+    Only `token_hash` is stored, never the token (auth/session_tokens.py).
+
+    Named `user_sessions`, not `sessions`, so it is never confused with a SQLAlchemy Session.
+
+    `organisation_id` is which organisation this sign-in acts for, chosen at sign-in from the
+    user's memberships. **It is a choice, not a permission**: every request re-checks it
+    against `organisation_memberships`, so removing a membership takes effect on the next
+    request. NULL for a user with no organisation, and set to NULL if the organisation is
+    deleted - the user stays signed in, with nothing to reach.
+    """
+
+    __tablename__ = "user_sessions"
+    __table_args__ = (
+        UniqueConstraint("token_hash", name="uq_user_sessions_token_hash"),
+        # "sign this user out everywhere", and the cascade when a user is deleted.
+        Index("ix_user_sessions_user_id", "user_id"),
+    )
+
+    id: Mapped[uuid.UUID] = uuid_primary_key()
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    organisation_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("organisations.id", ondelete="SET NULL")
+    )
+    # SHA-256 hex of the cookie token.
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = created_at_column()
+
+    def __repr__(self) -> str:
+        # Never the token hash: reprs end up in logs.
+        return f"<UserSession {self.id} user={self.user_id}>"
+
+
 class DataSource(Base):
     """
     Where a piece of feedback came from. TENANT-OWNED.

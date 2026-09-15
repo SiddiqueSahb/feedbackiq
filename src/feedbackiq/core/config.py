@@ -142,6 +142,13 @@ class Settings(BaseSettings):
     FEEDBACK_PAGE_SIZE: int = 50
     FEEDBACK_PAGE_SIZE_MAX: int = 200
 
+    # ---------------------------------------------------------------- authentication (Milestone 7)
+
+    # How long a sign-in lasts, from the moment it happens. Absolute, not sliding: a session
+    # ends this long after sign-in however busy it was. There is no signing secret to
+    # configure - a session is valid because its row exists (see auth/session_tokens.py).
+    SESSION_TTL_HOURS: int = 24
+
     # ---------------------------------------------------------------- API
 
     # Required in the x-api-key header on every /api/* route except health.
