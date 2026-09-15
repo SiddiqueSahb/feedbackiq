@@ -1,0 +1,73 @@
+.loading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-6);
+  color: var(--color-text-muted);
+}
+
+/* Wide tables scroll inside their card on narrow screens instead of widening the page. */
+.scroll {
+  overflow-x: auto;
+  margin: calc(-1 * var(--space-5));
+}
+
+.table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  font-size: var(--text-md);
+}
+
+.table th {
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table td {
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.table tbody tr:hover {
+  background: var(--color-surface-muted);
+}
+
+.numeric {
+  text-align: right;
+}
+
+.table th.numeric {
+  text-align: right;
+}
+
+.file {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 320px;
+  color: var(--color-text-muted);
+}
+
+.fileName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text);
+  font-weight: var(--weight-medium);
+}
+
+.muted {
+  color: var(--color-text-muted);
+}

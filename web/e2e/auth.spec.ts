@@ -9,6 +9,7 @@ import { expect, request as playwrightRequest, test } from "@playwright/test";
 import {
   PASSWORD,
   SESSION_COOKIE,
+  failOnContentSecurityPolicyViolations,
   registerThroughTheApi,
   registerThroughTheApp,
   signInThroughTheApp,
@@ -20,23 +21,7 @@ test.beforeAll(async ({ request }) => {
   expect(health.ok(), "The FeedbackIQ API must be running behind the app's /api proxy.").toBeTruthy();
 });
 
-// Behind nginx the app is served with a strict Content-Security-Policy (web/nginx.conf). Chromium
-// reports anything the policy blocks on the console; any such report fails the test, so a policy
-// that breaks the app cannot pass unnoticed. (Under `vite preview` there is no policy to break.)
-let cspViolations: string[] = [];
-
-test.beforeEach(({ page }) => {
-  cspViolations = [];
-  page.on("console", (message) => {
-    if (/Content Security Policy|Refused to (load|apply|execute|connect)/i.test(message.text())) {
-      cspViolations.push(message.text());
-    }
-  });
-});
-
-test.afterEach(() => {
-  expect(cspViolations, "the page broke its Content-Security-Policy").toEqual([]);
-});
+failOnContentSecurityPolicyViolations();
 
 test("registering creates an organisation and signs in with a cookie the page cannot read", async ({ page, context }) => {
   const email = uniqueEmail("ana");

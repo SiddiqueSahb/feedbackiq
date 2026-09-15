@@ -1,4 +1,29 @@
-import { expect, type APIRequestContext, type Page } from "@playwright/test";
+import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+
+/**
+ * Fail any test in the calling file during which Chromium reports a Content-Security-Policy
+ * violation.
+ *
+ * Behind nginx the app is served with a strict policy (web/nginx.conf); a policy that breaks the app
+ * must not pass unnoticed. Under `vite preview` there is no policy, so nothing is reported. Call once
+ * at the top of a spec file.
+ */
+export function failOnContentSecurityPolicyViolations(): void {
+  let violations: string[] = [];
+
+  test.beforeEach(({ page }) => {
+    violations = [];
+    page.on("console", (message) => {
+      if (/Content Security Policy|Refused to (load|apply|execute|connect)/i.test(message.text())) {
+        violations.push(message.text());
+      }
+    });
+  });
+
+  test.afterEach(() => {
+    expect(violations, "the page broke its Content-Security-Policy").toEqual([]);
+  });
+}
 
 export const PASSWORD = "correct horse battery staple";
 export const SESSION_COOKIE = "feedbackiq_session";
