@@ -52,6 +52,23 @@ npm run e2e                          # builds, serves with `vite preview`, runs 
 Every test registers fresh email addresses, so the database never needs resetting. To test an app
 that is already running - the nginx container, say - set `E2E_BASE_URL=http://localhost:8080`.
 
+## Run in Docker
+
+```bash
+docker compose up -d --build postgres backend web      # http://localhost:8080
+docker compose run --rm backend alembic upgrade head   # first time, or after a new migration
+```
+
+The `web` image (`web/Dockerfile`) builds the app with Node and serves it with unprivileged nginx
+(`web/nginx.conf`), which also forwards `/api` to the backend - the same single-origin shape as
+development. nginx adds the security headers (Content-Security-Policy, `nosniff`, framing and
+referrer policy) and allows uploads slightly above the API's 10 MB limit, so the API's own message
+reaches the person uploading.
+
+Compose runs the backend in production mode, so the session cookie is `Secure`. Chromium and Firefox
+accept that on `http://localhost`; a deployed environment must serve HTTPS. Run the browser tests
+against the container with `E2E_BASE_URL=http://localhost:8080 npm run e2e`.
+
 ## API types
 
 `src/api/schema.d.ts` is generated from the backend's OpenAPI document and never edited by hand.

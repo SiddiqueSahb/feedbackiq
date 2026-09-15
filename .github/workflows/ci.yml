@@ -315,6 +315,17 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # The customer web app (Milestone 8): Node builds it, unprivileged nginx serves it.
+      - name: Build web image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: web/Dockerfile
+          push: false
+          tags: feedbackiq-web:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
       # Once you have somewhere to push to, add a login step above this and
       # switch push: false to push: true, e.g.:
       #

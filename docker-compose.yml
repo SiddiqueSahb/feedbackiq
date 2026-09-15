@@ -62,6 +62,9 @@ services:
       - ENVIRONMENT=production
       # Inside the compose network the database is reachable by service name.
       - DATABASE_URL=postgresql+psycopg://feedbackiq:feedbackiq@postgres:5432/feedbackiq
+      # The web app's origin (the `web` service below). Browsers reach the API through that
+      # origin's /api proxy, so this is what the backend's origin check and CORS compare against.
+      - ALLOWED_ORIGINS=http://localhost:8080
     volumes:
       - ./data:/app/data
       - ./models:/app/models
@@ -120,6 +123,27 @@ services:
       # backend/Dockerfile, hits /api/health) to pass, not just for the
       # container process to start — otherwise the frontend can fire
       # requests before the backend app has finished loading.
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # The customer web app (Milestone 8): nginx serving the built React app and forwarding /api to
+  # the backend (web/nginx.conf). The browser talks only to this origin, so the backend's HttpOnly
+  # session cookie stays first-party and no CORS is involved.
+  #
+  #   docker compose up -d postgres backend web      → http://localhost:8080
+  #
+  # The backend runs in production mode here, so the session cookie is Secure. Chromium and Firefox
+  # accept Secure cookies on http://localhost; a real deployment must serve HTTPS.
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    image: feedbackiq-web
+    container_name: feedbackiq-web
+    ports:
+      - "8080:8080"
+    depends_on:
       backend:
         condition: service_healthy
     restart: unless-stopped
