@@ -9,8 +9,14 @@ export const ANALYTICS_KEY = ["analytics"] as const;
 /** How often the figures are re-read while feedback is still waiting for analysis. */
 export const PENDING_ANALYSIS_POLL_MS = 10_000;
 
+/**
+ * True while analysis is still coming for some feedback (its import's analysis is queued or running).
+ *
+ * Not `not_analysed > 0`: feedback whose analysis failed for good, or that no analysis is queued for,
+ * will never change, so waiting for it meant polling for ever (found in the Milestone 8 review).
+ */
 export function isWaitingForAnalysis(summary: AnalyticsSummary | undefined): boolean {
-  return (summary?.not_analysed ?? 0) > 0;
+  return (summary?.analysis_pending ?? 0) > 0;
 }
 
 export function useSummary() {

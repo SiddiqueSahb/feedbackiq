@@ -669,10 +669,18 @@ export interface components {
         /**
          * AnalyticsSummary
          * @description Headline numbers. Percentages are of *analysed* feedback, not of everything.
+         *
+         *     `not_analysed` is split by what its import's latest analysis job says: `analysis_pending` is still
+         *     coming (queued or running), `analysis_failed` gave up after its last attempt. Feedback with no
+         *     analysis job at all counts in neither, so a client only waits for analysis that will happen.
          */
         AnalyticsSummary: {
             /** Analysed */
             analysed: number;
+            /** Analysis Failed */
+            analysis_failed: number;
+            /** Analysis Pending */
+            analysis_pending: number;
             /** Average Rating */
             average_rating?: number | null;
             /** Earliest Feedback At */

@@ -18,11 +18,12 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import Select, and_, func, select
+from sqlalchemy import Select, String, and_, cast, func, select
 from sqlalchemy.orm import Session
 
 from feedbackiq.core.logging import get_logger
-from feedbackiq.db.models import AnalysisResult, Category, Feedback
+from feedbackiq.db.jobs import ANALYSE_IMPORT
+from feedbackiq.db.models import AnalysisResult, Category, Feedback, Job
 from feedbackiq.services.feedback import (
     SENTIMENTS,
     FeedbackFilters,
@@ -38,6 +39,10 @@ TREND_INTERVALS = ("day", "week", "month")
 # A trend is capped so one request cannot ask for a row per day since the epoch.
 MAX_TREND_POINTS = 400
 
+# Job statuses meaning an import's analysis is still coming. A failure with attempts left is re-queued
+# (db/jobs.py::mark_failed), so a job whose latest status is "failed" has given up.
+PENDING_JOB_STATUSES = ("queued", "running")
+
 
 def summary(
     session: Session,
@@ -50,6 +55,10 @@ def summary(
 
     One query. The sentiment counts are conditional aggregates (`count(...) FILTER`), which
     is why three numbers do not cost three round trips.
+
+    Unanalysed feedback is split by its import's latest analysis job: `analysis_pending` (queued or
+    running) is worth waiting for, `analysis_failed` is not. Without that split a dashboard waits for
+    ever on analysis that gave up (found in the Milestone 8 review).
     """
     filters = filters or FeedbackFilters()
 
@@ -62,6 +71,8 @@ def summary(
         "total_feedback": total,
         "analysed": analysed,
         "not_analysed": total - analysed,
+        "analysis_pending": row.analysis_pending or 0,
+        "analysis_failed": row.analysis_failed or 0,
         "sentiment_counts": {sentiment: getattr(row, sentiment) or 0 for sentiment in SENTIMENTS},
         "sentiment_percentages": {
             sentiment: _percentage(getattr(row, sentiment) or 0, analysed)
@@ -254,21 +265,53 @@ def _base_query(organisation_id: uuid.UUID, filters: FeedbackFilters) -> Select:
 
 
 def _summary_query(organisation_id: uuid.UUID, filters: FeedbackFilters) -> Select:
-    return _base_query(organisation_id, filters).with_only_columns(
-        func.count(Feedback.id).label("total"),
-        func.count(AnalysisResult.id).label("analysed"),
-        *[
+    latest_job = _latest_import_job(organisation_id)
+    not_analysed = AnalysisResult.id.is_(None)
+
+    return (
+        _base_query(organisation_id, filters)
+        # At most one latest job per import, so this join never multiplies feedback rows.
+        .outerjoin(latest_job, latest_job.c.import_batch_id == cast(Feedback.import_batch_id, String))
+        .with_only_columns(
+            func.count(Feedback.id).label("total"),
+            func.count(AnalysisResult.id).label("analysed"),
+            *[
+                func.count(AnalysisResult.id)
+                .filter(AnalysisResult.sentiment_label == sentiment)
+                .label(sentiment)
+                for sentiment in SENTIMENTS
+            ],
             func.count(AnalysisResult.id)
-            .filter(AnalysisResult.sentiment_label == sentiment)
-            .label(sentiment)
-            for sentiment in SENTIMENTS
-        ],
-        func.count(AnalysisResult.id)
-        .filter(AnalysisResult.is_unclassified.is_(True))
-        .label("unclassified"),
-        func.avg(Feedback.rating).label("average_rating"),
-        func.min(Feedback.feedback_at).label("earliest"),
-        func.max(Feedback.feedback_at).label("latest"),
+            .filter(AnalysisResult.is_unclassified.is_(True))
+            .label("unclassified"),
+            func.count(Feedback.id)
+            .filter(not_analysed, latest_job.c.status.in_(PENDING_JOB_STATUSES))
+            .label("analysis_pending"),
+            func.count(Feedback.id)
+            .filter(not_analysed, latest_job.c.status == "failed")
+            .label("analysis_failed"),
+            func.avg(Feedback.rating).label("average_rating"),
+            func.min(Feedback.feedback_at).label("earliest"),
+            func.max(Feedback.feedback_at).label("latest"),
+        )
+    )
+
+
+def _latest_import_job(organisation_id: uuid.UUID):
+    """
+    Each import's most recent analysis job and its status, as a subquery.
+
+    A job names its import only in its JSON payload, as in db/jobs.py::latest_import_jobs, and is
+    scoped to the organisation the same way: another organisation's job can never describe our import.
+    """
+    import_batch_id = Job.payload["import_batch_id"].astext
+
+    return (
+        select(import_batch_id.label("import_batch_id"), Job.status)
+        .where(Job.organisation_id == organisation_id, Job.kind == ANALYSE_IMPORT)
+        .distinct(import_batch_id)
+        .order_by(import_batch_id, Job.created_at.desc(), Job.id.desc())
+        .subquery("latest_import_job")
     )
 
 

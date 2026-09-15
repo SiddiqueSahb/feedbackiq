@@ -136,7 +136,7 @@ def page(**overrides) -> FeedbackPage:
 
 def summary_result() -> AnalyticsSummary:
     return AnalyticsSummary(
-        total_feedback=10, analysed=9, not_analysed=1,
+        total_feedback=10, analysed=9, not_analysed=1, analysis_pending=0, analysis_failed=1,
         sentiment_counts={"positive": 2, "neutral": 1, "negative": 6},
         sentiment_percentages={"positive": 22.2, "neutral": 11.1, "negative": 66.7},
         unclassified=1, unclassified_percentage=11.1, average_rating=2.4,
@@ -367,6 +367,8 @@ def test_the_summary_shape(client, monkeypatch):
     assert body["analysed"] == 9
     assert body["sentiment_counts"]["negative"] == 6
     assert body["average_rating"] == 2.4
+    # Unanalysed feedback is split into analysis still coming and analysis that gave up.
+    assert (body["not_analysed"], body["analysis_pending"], body["analysis_failed"]) == (1, 0, 1)
 
 
 def test_the_trend_shape(client, monkeypatch):

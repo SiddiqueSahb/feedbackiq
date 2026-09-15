@@ -28,6 +28,8 @@ const DASHBOARD_ROUTES = {
       total_feedback: 0,
       analysed: 0,
       not_analysed: 0,
+      analysis_pending: 0,
+      analysis_failed: 0,
       sentiment_counts: { positive: 0, neutral: 0, negative: 0 },
       sentiment_percentages: { positive: 0, neutral: 0, negative: 0 },
       unclassified: 0,

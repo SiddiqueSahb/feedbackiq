@@ -23,6 +23,8 @@ function figures(overrides: Partial<AnalyticsSummary> = {}): AnalyticsSummary {
     total_feedback: 12840,
     analysed: 12840,
     not_analysed: 0,
+    analysis_pending: 0,
+    analysis_failed: 0,
     sentiment_counts: { positive: 3210, neutral: 1284, negative: 8346 },
     sentiment_percentages: { positive: 25, neutral: 10, negative: 65 },
     unclassified: 834,
@@ -34,7 +36,16 @@ function figures(overrides: Partial<AnalyticsSummary> = {}): AnalyticsSummary {
   };
 }
 
+/** Three items, none analysed: combine with analysis_pending or analysis_failed. */
+const NOTHING_ANALYSED_YET: Partial<AnalyticsSummary> = {
+  total_feedback: 3, analysed: 0, not_analysed: 3, unclassified: 0, unclassified_percentage: 0,
+  sentiment_counts: { positive: 0, neutral: 0, negative: 0 },
+  sentiment_percentages: { positive: 0, neutral: 0, negative: 0 },
+  average_rating: 1.3,
+};
+
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
@@ -128,10 +139,8 @@ describe("states of the organisation's data", () => {
     await openDashboard({
       status: 200,
       body: figures({
-        total_feedback: 3, analysed: 0, not_analysed: 3, unclassified: 0, unclassified_percentage: 0,
-        sentiment_counts: { positive: 0, neutral: 0, negative: 0 },
-        sentiment_percentages: { positive: 0, neutral: 0, negative: 0 },
-        average_rating: 1.3,
+        ...NOTHING_ANALYSED_YET,
+        analysis_pending: 3,
       }),
     });
 
@@ -140,6 +149,37 @@ describe("states of the organisation's data", () => {
     expect(within(tile("Negative")).getByText("—")).toBeInTheDocument();
     expect(within(tile("Negative")).getByText("Waiting for analysis")).toBeInTheDocument();
     expect(within(tile("Feedback")).getByText("0 analysed · 3 waiting")).toBeInTheDocument();
+  });
+
+  // The bug found in the Milestone 8 review: analysis that gave up read as "in progress" for ever.
+  it("says analysis failed, not that it is in progress, when analysis gave up", async () => {
+    await openDashboard({
+      status: 200,
+      body: figures({
+        ...NOTHING_ANALYSED_YET,
+        analysis_failed: 3,
+      }),
+    });
+
+    expect(await screen.findByText("Analysis failed")).toBeInTheDocument();
+    expect(screen.getByText(/3 of 3 feedback items could not be analysed/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View imports" })).toHaveAttribute("href", "/imports");
+    expect(screen.queryByText("Analysis in progress")).not.toBeInTheDocument();
+    expect(within(tile("Feedback")).getByText("0 analysed · 3 failed")).toBeInTheDocument();
+    expect(within(tile("Negative")).getByText("Not analysed")).toBeInTheDocument();
+  });
+
+  it("tells waiting and failed feedback apart when both exist", async () => {
+    await openDashboard({
+      status: 200,
+      body: figures({ total_feedback: 10, analysed: 5, not_analysed: 5, analysis_pending: 2, analysis_failed: 3 }),
+    });
+
+    expect(await screen.findByText("Analysis in progress")).toBeInTheDocument();
+    expect(screen.getByText(/2 of 10 feedback items are still waiting/)).toBeInTheDocument();
+    expect(screen.getByText("Analysis failed")).toBeInTheDocument();
+    expect(screen.getByText(/3 of 10 feedback items could not be analysed/)).toBeInTheDocument();
+    expect(within(tile("Feedback")).getByText("5 analysed · 2 waiting · 3 failed")).toBeInTheDocument();
   });
 
   it("offers a retry when the figures cannot be loaded", async () => {
@@ -205,8 +245,40 @@ describe("formatting and polling rules", () => {
   });
 
   it("polls only while feedback is waiting for analysis", () => {
-    expect(isWaitingForAnalysis(figures({ not_analysed: 2 }))).toBe(true);
+    expect(isWaitingForAnalysis(figures({ not_analysed: 2, analysis_pending: 2 }))).toBe(true);
     expect(isWaitingForAnalysis(figures({ not_analysed: 0 }))).toBe(false);
     expect(isWaitingForAnalysis(undefined)).toBe(false);
+  });
+
+  it("does not poll for analysis that failed, or for feedback no analysis is coming for", () => {
+    expect(isWaitingForAnalysis(figures({ not_analysed: 2, analysis_failed: 2 }))).toBe(false);
+    expect(isWaitingForAnalysis(figures({ not_analysed: 2 }))).toBe(false);
+  });
+});
+
+describe("polling the figures", () => {
+  /** How many times the page asks for the summary while `ms` pass, after its first load. */
+  async function summaryRequestsDuring(ms: number, body: AnalyticsSummary) {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const api = await openDashboard({ status: 200, body });
+    await screen.findByText("Feedback", { selector: "dt" });
+
+    const count = () => api.calls.filter((call) => call.url === "/api/v1/analytics/summary").length;
+    const before = count();
+    await vi.advanceTimersByTimeAsync(ms);
+
+    return count() - before;
+  }
+
+  it("re-reads the figures while analysis is pending", async () => {
+    const requests = await summaryRequestsDuring(25_000, figures({ ...NOTHING_ANALYSED_YET, analysis_pending: 3 }));
+
+    expect(requests).toBeGreaterThanOrEqual(2);
+  });
+
+  it("stops re-reading when the only unanalysed feedback is analysis that failed", async () => {
+    const requests = await summaryRequestsDuring(25_000, figures({ ...NOTHING_ANALYSED_YET, analysis_failed: 3 }));
+
+    expect(requests).toBe(0);
   });
 });

@@ -11,29 +11,23 @@ import styles from "./SummaryTiles.module.css";
 export function SummaryTiles({ summary }: { summary: AnalyticsSummary }) {
   const analysed = summary.analysed;
   const hasAnalysis = analysed > 0;
+  // Only say "waiting" when analysis is actually coming; failed analysis is not waited for.
+  const noShare = { value: "—", caption: summary.analysis_pending > 0 ? "Waiting for analysis" : "Not analysed" };
 
   const share = (percentage: number, count: number) =>
     hasAnalysis
       ? { value: formatPercent(percentage), caption: `${formatCompact(count)} of ${formatCompact(analysed)} analysed` }
-      : { value: "—", caption: "Waiting for analysis" };
+      : noShare;
 
   const negative = share(summary.sentiment_percentages.negative, summary.sentiment_counts.negative);
   const positive = share(summary.sentiment_percentages.positive, summary.sentiment_counts.positive);
   const unclassified = hasAnalysis
     ? { value: formatPercent(summary.unclassified_percentage), caption: "Complaints matching no category" }
-    : { value: "—", caption: "Waiting for analysis" };
+    : noShare;
 
   return (
     <dl className={styles.tiles}>
-      <StatTile
-        label="Feedback"
-        value={formatCompact(summary.total_feedback)}
-        caption={
-          summary.not_analysed > 0
-            ? `${formatCompact(analysed)} analysed · ${formatCompact(summary.not_analysed)} waiting`
-            : "All analysed"
-        }
-      />
+      <StatTile label="Feedback" value={formatCompact(summary.total_feedback)} caption={feedbackCaption(summary)} />
       <StatTile label="Negative" value={negative.value} caption={negative.caption} />
       <StatTile label="Positive" value={positive.value} caption={positive.caption} />
       <StatTile label="Unclassified" value={unclassified.value} caption={unclassified.caption} />
@@ -44,4 +38,21 @@ export function SummaryTiles({ summary }: { summary: AnalyticsSummary }) {
       />
     </dl>
   );
+}
+
+/** "All analysed", or what the unanalysed feedback is doing: "40 analysed · 2 waiting · 3 failed". */
+function feedbackCaption(summary: AnalyticsSummary): string {
+  if (summary.not_analysed === 0) {
+    return "All analysed";
+  }
+
+  const parts = [`${formatCompact(summary.analysed)} analysed`];
+  const unaccounted = summary.not_analysed - summary.analysis_pending - summary.analysis_failed;
+
+  if (summary.analysis_pending > 0) parts.push(`${formatCompact(summary.analysis_pending)} waiting`);
+  if (summary.analysis_failed > 0) parts.push(`${formatCompact(summary.analysis_failed)} failed`);
+  // Feedback no analysis job was ever queued for: neither waiting nor failed.
+  if (unaccounted > 0) parts.push(`${formatCompact(unaccounted)} not analysed`);
+
+  return parts.join(" · ");
 }

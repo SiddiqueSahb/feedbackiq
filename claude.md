@@ -37,8 +37,8 @@ architectural specification.
    **513 passed, 2 xfailed** or better (508 before Milestone 8; 382 before Milestone 7). Never
    weaken or delete a test to get green, and never flip a strict `xfail` without documenting why
    the behaviour changed. The database suite is separate and needs a real PostgreSQL:
-   `pytest tests/integration` (273 tests), not selected by a bare `pytest`. The web app has its
-   own: `npm test` in `web/` (117 Vitest tests) and `npm run e2e` (15 Playwright tests against the
+   `pytest tests/integration` (278 tests), not selected by a bare `pytest`. The web app has its
+   own: `npm test` in `web/` (122 Vitest tests) and `npm run e2e` (15 Playwright tests against the
    real API).
    Gate commits on pytest's exit code explicitly: `set -e` does not stop a chain when
    `pytest | tail` fails.
@@ -231,6 +231,10 @@ python -m feedbackiq.api.openapi_export web/openapi.json && (cd web && npm run a
     refused page on screen — a real bug found in Milestone 8.
   - Any 401 from a data request ends the session in the app (`app/queryClient.ts`); sign-in,
     registration and sign-out carry `meta: { credentialCheck: true }` so a wrong password is not one.
+  - **Poll only for analysis that is coming.** "Not analysed" is either `analysis_pending` (the import's
+    latest job is queued or running) or `analysis_failed` (it gave up); the dashboard polls on
+    `analysis_pending` alone. Polling on `not_analysed` waited for ever on failed analysis — a bug found
+    in the Milestone 8 review.
   - **API types are generated.** After changing a backend request or response shape, regenerate
     `web/openapi.json` and `src/api/schema.d.ts` (command above). CI fails on drift in either.
   - **A `Literal` with the same values must be written in the same order everywhere** (or share an

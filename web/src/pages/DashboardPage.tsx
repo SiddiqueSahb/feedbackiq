@@ -83,8 +83,18 @@ function DashboardBody({ summary }: { summary: ReturnType<typeof useSummary> }) 
     <div className={styles.sections}>
       {poll && (
         <Alert tone="info" title="Analysis in progress">
-          {formatCompact(figures.not_analysed)} of {formatCompact(figures.total_feedback)} feedback items are
+          {formatCompact(figures.analysis_pending)} of {formatCompact(figures.total_feedback)} feedback items are
           still waiting to be analysed. These figures update on their own as analysis completes.
+        </Alert>
+      )}
+
+      {figures.analysis_failed > 0 && (
+        <Alert tone="error" title="Analysis failed">
+          <p>
+            {formatCompact(figures.analysis_failed)} of {formatCompact(figures.total_feedback)} feedback items could not be
+            analysed, so these figures leave them out. The imports list shows which uploads were affected.
+          </p>
+          <ButtonLink to="/imports">View imports</ButtonLink>
         </Alert>
       )}
 

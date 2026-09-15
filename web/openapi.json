@@ -44,10 +44,18 @@
         "type": "object"
       },
       "AnalyticsSummary": {
-        "description": "Headline numbers. Percentages are of *analysed* feedback, not of everything.",
+        "description": "Headline numbers. Percentages are of *analysed* feedback, not of everything.\n\n`not_analysed` is split by what its import's latest analysis job says: `analysis_pending` is still\ncoming (queued or running), `analysis_failed` gave up after its last attempt. Feedback with no\nanalysis job at all counts in neither, so a client only waits for analysis that will happen.",
         "properties": {
           "analysed": {
             "title": "Analysed",
+            "type": "integer"
+          },
+          "analysis_failed": {
+            "title": "Analysis Failed",
+            "type": "integer"
+          },
+          "analysis_pending": {
+            "title": "Analysis Pending",
             "type": "integer"
           },
           "average_rating": {
@@ -112,6 +120,8 @@
           "total_feedback",
           "analysed",
           "not_analysed",
+          "analysis_pending",
+          "analysis_failed",
           "sentiment_counts",
           "sentiment_percentages",
           "unclassified",

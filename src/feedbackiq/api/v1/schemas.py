@@ -73,11 +73,19 @@ class SentimentPercentages(BaseModel):
 
 
 class AnalyticsSummary(BaseModel):
-    """Headline numbers. Percentages are of *analysed* feedback, not of everything."""
+    """
+    Headline numbers. Percentages are of *analysed* feedback, not of everything.
+
+    `not_analysed` is split by what its import's latest analysis job says: `analysis_pending` is still
+    coming (queued or running), `analysis_failed` gave up after its last attempt. Feedback with no
+    analysis job at all counts in neither, so a client only waits for analysis that will happen.
+    """
 
     total_feedback: int
     analysed: int
     not_analysed: int
+    analysis_pending: int
+    analysis_failed: int
     sentiment_counts: SentimentCounts
     sentiment_percentages: SentimentPercentages
     unclassified: int

@@ -17,8 +17,10 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from sqlalchemy import event
+from sqlalchemy import event, update
 
+from feedbackiq.db import jobs as job_queue
+from feedbackiq.db.models import Job
 from feedbackiq.db.persistence import save_batch_analysis, save_feedback
 from feedbackiq.engine.types import (
     BatchAnalysis,
@@ -38,6 +40,7 @@ from feedbackiq.services.feedback import (
     get_feedback,
     list_feedback,
 )
+from feedbackiq.services.imports import import_csv
 
 pytestmark = pytest.mark.integration
 
@@ -372,6 +375,87 @@ def test_the_summary_respects_filters(session, organisation, corpus):
 
     assert result["total_feedback"] == 3
     assert result["sentiment_counts"]["negative"] == 3
+
+
+# ---------------------------------------------------------------- waiting for analysis, or failed
+#
+# "Not analysed" is two different situations for a customer: analysis that is still coming, and
+# analysis that gave up. The dashboard polled and said "Analysis in progress" for both, for ever
+# (found in the Milestone 8 review). The summary now tells them apart by each import's latest job.
+
+TWO_ROWS = b"text\nWaited forty minutes for a table\nThe food was cold\n"
+
+
+def waiting(session, organisation) -> tuple[int, int, int]:
+    """(not analysed, of which pending, of which failed) from the summary."""
+    result = summary(session, organisation_id=organisation.id)
+
+    return result["not_analysed"], result["analysis_pending"], result["analysis_failed"]
+
+
+def test_unanalysed_feedback_is_pending_while_its_analysis_can_still_run(session, organisation):
+    import_csv(session, raw=TWO_ROWS, organisation_id=organisation.id)
+    session.commit()
+    assert waiting(session, organisation) == (2, 2, 0)
+
+    job = job_queue.claim_next_job(session, worker_id="test-worker")
+    session.commit()
+    assert waiting(session, organisation) == (2, 2, 0)
+
+    # A failure with attempts left goes back to the queue, so the analysis is still coming.
+    job_queue.mark_failed(session, job, error="model unavailable", retry=True)
+    session.commit()
+    assert waiting(session, organisation) == (2, 2, 0)
+
+
+def test_unanalysed_feedback_whose_analysis_gave_up_is_failed_not_pending(session, organisation):
+    import_csv(session, raw=TWO_ROWS, organisation_id=organisation.id)
+    job = job_queue.claim_next_job(session, worker_id="test-worker")
+    job_queue.mark_failed(session, job, error="model unavailable", retry=False)
+    session.commit()
+
+    assert waiting(session, organisation) == (2, 0, 2)
+
+
+def test_a_new_analysis_after_a_failure_makes_the_feedback_pending_again(session, organisation):
+    imported = import_csv(session, raw=TWO_ROWS, organisation_id=organisation.id)
+    job = job_queue.claim_next_job(session, worker_id="test-worker")
+    job_queue.mark_failed(session, job, error="model unavailable", retry=False)
+
+    retry = job_queue.create_job(
+        session, organisation_id=organisation.id, payload={"import_batch_id": str(imported.batch.id)}
+    )
+    # Created in the same second as the failed job would tie; make the retry unambiguously newer.
+    session.execute(update(Job).where(Job.id == retry.id).values(created_at=Job.created_at + timedelta(seconds=5)))
+    session.commit()
+
+    assert waiting(session, organisation) == (2, 2, 0)
+
+
+def test_feedback_with_no_analysis_job_is_neither_pending_nor_failed(session, organisation, corpus):
+    # The corpus's unanalysed row was stored directly - no import, no job - so nothing is coming
+    # for it, and a dashboard must not wait for it.
+    assert waiting(session, organisation) == (1, 0, 0)
+
+
+def test_another_organisations_failed_job_never_marks_our_feedback_failed(
+    session, organisation, other_organisation
+):
+    ours = import_csv(session, raw=TWO_ROWS, organisation_id=organisation.id)
+    session.commit()
+
+    forged = job_queue.create_job(
+        session, organisation_id=other_organisation.id, payload={"import_batch_id": str(ours.batch.id)}
+    )
+    session.execute(
+        update(Job)
+        .where(Job.id == forged.id)
+        .values(status="failed", created_at=Job.created_at + timedelta(seconds=5))
+    )
+    session.commit()
+
+    # The forged job is newer and failed, but it is another organisation's: ours is still queued.
+    assert waiting(session, organisation) == (2, 2, 0)
 
 
 def test_the_trend_buckets_by_day_in_sql(session, db_engine, organisation, corpus):

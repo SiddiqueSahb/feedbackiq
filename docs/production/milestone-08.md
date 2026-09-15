@@ -203,6 +203,25 @@ because the API has no comparison period to compute one from.
 **Sentiment over time and complaint categories (slice B).** Each card loads, fails and retries on its
 own, and both poll with the summary while feedback waits.
 
+**Fixed after the milestone review: analysis that gave up.**
+- **Bug:** the dashboard treated every unanalysed item as waiting. An import whose analysis had
+  failed for good showed "Analysis in progress" and re-read three endpoints every 10 seconds, forever.
+- **API:** the summary now also returns two counts, computed in the same single SQL statement from
+  each import's latest analysis job:
+  - `analysis_pending`: that job is queued or running;
+  - `analysis_failed`: it failed after its last attempt.
+
+  Feedback with no analysis job counts in neither.
+- **Dashboard:** it polls only while `analysis_pending > 0`, shows "Analysis failed" with a link to the
+  imports list, and the Feedback tile says "40 analysed · 2 waiting · 3 failed".
+- **Tests** (each written first and seen failing):
+  - five integration tests, including one proving another organisation's failed job never marks
+    this organisation's feedback failed;
+  - the API summary shape test;
+  - five Vitest tests, including a fake-timer check that polling stops.
+- **Limit:** a job left `running` by a crashed worker still reads as pending until the stale-job
+  reaper requeues or abandons it.
+
 ## 8. Charts: form, colour and a visual review
 
 The dataviz guidance was followed as a procedure, not a style.
