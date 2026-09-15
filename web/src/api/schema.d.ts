@@ -932,8 +932,13 @@ export interface components {
         /**
          * ImportAccepted
          * @description The response to an upload: what was stored, what was not, and what happens next.
+         *
+         *     `job_id` and `analysis_status` describe the analysis this upload queued. For an identical
+         *     re-upload they are null - nothing new was queued - and `duplicate_upload` is true.
          */
         ImportAccepted: {
+            /** Analysis Status */
+            analysis_status?: ("queued" | "running" | "succeeded" | "failed") | null;
             /** Completed At */
             completed_at?: string | null;
             /** Created At */
@@ -989,6 +994,8 @@ export interface components {
          * @description An import batch as a customer sees it.
          */
         ImportSummary: {
+            /** Analysis Status */
+            analysis_status?: ("queued" | "running" | "succeeded" | "failed") | null;
             /** Completed At */
             completed_at?: string | null;
             /** Created At */
@@ -997,6 +1004,8 @@ export interface components {
             filename?: string | null;
             /** Import Id */
             import_id: string;
+            /** Job Id */
+            job_id?: string | null;
             /** Organisation Id */
             organisation_id: string;
             /** Rows Imported */

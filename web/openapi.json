@@ -801,8 +801,25 @@
         "type": "object"
       },
       "ImportAccepted": {
-        "description": "The response to an upload: what was stored, what was not, and what happens next.",
+        "description": "The response to an upload: what was stored, what was not, and what happens next.\n\n`job_id` and `analysis_status` describe the analysis this upload queued. For an identical\nre-upload they are null - nothing new was queued - and `duplicate_upload` is true.",
         "properties": {
+          "analysis_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "queued",
+                  "running",
+                  "succeeded",
+                  "failed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analysis Status"
+          },
           "completed_at": {
             "anyOf": [
               {
@@ -934,6 +951,23 @@
       "ImportSummary": {
         "description": "An import batch as a customer sees it.",
         "properties": {
+          "analysis_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "queued",
+                  "running",
+                  "succeeded",
+                  "failed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analysis Status"
+          },
           "completed_at": {
             "anyOf": [
               {
@@ -972,6 +1006,17 @@
           "import_id": {
             "title": "Import Id",
             "type": "string"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
           },
           "organisation_id": {
             "title": "Organisation Id",

@@ -170,7 +170,7 @@ def _read_import(organisation_id: uuid.UUID, import_id: str) -> ImportSummary:
             # distinguishable from one that does not exist.
             raise HTTPException(status_code=404, detail="No such import.")
 
-        return _import_summary(batch)
+        return _summaries(session, organisation_id, [batch])[0]
 
 
 def _read_job(organisation_id: uuid.UUID, job_id: str) -> JobSummary:
@@ -189,11 +189,11 @@ def _read_job(organisation_id: uuid.UUID, job_id: str) -> JobSummary:
 
 
 def _import_accepted(outcome: ImportOutcome) -> ImportAccepted:
-    summary = _import_summary(outcome.batch)
+    # The job this upload queued - None for an identical re-upload, which queued nothing new.
+    summary = _import_summary(outcome.batch, outcome.job)
 
     return ImportAccepted(
         **summary.model_dump(),
-        job_id=str(outcome.job.id) if outcome.job else None,
         duplicates_in_file=outcome.duplicates_in_file,
         duplicates_in_database=outcome.duplicates_in_database,
         duplicate_upload=outcome.is_duplicate_upload,
@@ -201,7 +201,19 @@ def _import_accepted(outcome: ImportOutcome) -> ImportAccepted:
     )
 
 
-def _import_summary(batch: ImportBatch) -> ImportSummary:
+def _summaries(session, organisation_id: uuid.UUID, batches: list[ImportBatch]) -> list[ImportSummary]:
+    """
+    Import summaries with their analysis status: one query for the jobs however many imports there
+    are, scoped to the organisation (db/jobs.py::latest_import_jobs).
+    """
+    jobs = job_queue.latest_import_jobs(
+        session, organisation_id=organisation_id, import_batch_ids=[batch.id for batch in batches]
+    )
+
+    return [_import_summary(batch, jobs.get(batch.id)) for batch in batches]
+
+
+def _import_summary(batch: ImportBatch, job: Job | None = None) -> ImportSummary:
     return ImportSummary(
         import_id=str(batch.id),
         organisation_id=str(batch.organisation_id),
@@ -212,6 +224,8 @@ def _import_summary(batch: ImportBatch) -> ImportSummary:
         rows_rejected=batch.failed_count,
         created_at=batch.created_at,
         completed_at=batch.completed_at,
+        job_id=str(job.id) if job else None,
+        analysis_status=job.status if job else None,
     )
 
 

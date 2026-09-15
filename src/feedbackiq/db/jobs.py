@@ -4,6 +4,7 @@ The job queue, in PostgreSQL.
     create_job(...)            a caller records work to be done
     claim_next_job(...)        a worker takes one, atomically
     mark_succeeded / mark_failed
+    latest_import_jobs(...)    the analysis behind each import, for an imports page
 
 **Why PostgreSQL and not a broker.** The queue is transactional with the data it
 describes: a job is created in the same transaction as the import it refers to, so there is
@@ -94,6 +95,45 @@ def get_job(session: Session, job_id: uuid.UUID, *, organisation_id: uuid.UUID |
         query = query.where(Job.organisation_id == organisation_id)
 
     return session.scalar(query)
+
+
+def latest_import_jobs(
+    session: Session,
+    *,
+    organisation_id: uuid.UUID,
+    import_batch_ids: Sequence[uuid.UUID],
+) -> dict[uuid.UUID, Job]:
+    """
+    The most recent analysis job for each of these imports, in one query (Milestone 8).
+
+    A job names its import only in `payload["import_batch_id"]` - jobs are generic work items -
+    so the lookup reads that JSON field. It is scoped to `organisation_id` as well as to the ids:
+    a job can never be attached to another organisation's import, even one whose payload names it.
+
+    Imports without an analysis job - nothing from the file could be stored - are simply absent
+    from the result.
+    """
+    if not import_batch_ids:
+        return {}
+
+    wanted = {str(batch_id) for batch_id in import_batch_ids}
+
+    jobs = session.scalars(
+        select(Job)
+        .where(
+            Job.organisation_id == organisation_id,
+            Job.kind == ANALYSE_IMPORT,
+            Job.payload["import_batch_id"].astext.in_(wanted),
+        )
+        # Newest first, so the first job met for each import is its latest.
+        .order_by(Job.created_at.desc(), Job.id.desc())
+    ).all()
+
+    latest: dict[uuid.UUID, Job] = {}
+    for job in jobs:
+        latest.setdefault(uuid.UUID(str(job.payload["import_batch_id"])), job)
+
+    return latest
 
 
 def claim_next_job(

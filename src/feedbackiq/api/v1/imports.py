@@ -25,8 +25,8 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, 
 from feedbackiq.api.deps import get_current_organisation
 from feedbackiq.api.routes.imports import (
     UPLOAD_DESCRIPTION,
-    _import_summary,
     _job_summary,
+    _summaries,
     accept_upload,
 )
 from feedbackiq.api.schemas import ImportAccepted, ImportSummary, JobSummary
@@ -139,7 +139,7 @@ def _list(organisation_id: uuid.UUID, limit: int) -> list[ImportSummary]:
             session, organisation_id=organisation_id, limit=limit
         )
 
-        return [_import_summary(batch) for batch in batches]
+        return _summaries(session, organisation_id, batches)
 
 
 def _import(organisation_id: uuid.UUID, import_id: uuid.UUID) -> ImportSummary:
@@ -151,7 +151,7 @@ def _import(organisation_id: uuid.UUID, import_id: uuid.UUID) -> ImportSummary:
         if batch is None:
             raise HTTPException(status_code=404, detail="No such import.")
 
-        return _import_summary(batch)
+        return _summaries(session, organisation_id, [batch])[0]
 
 
 def _job(organisation_id: uuid.UUID, job_id: uuid.UUID) -> JobSummary:

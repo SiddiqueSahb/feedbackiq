@@ -266,11 +266,22 @@ class ImportSummary(BaseModel):
     created_at: datetime | None = None
     completed_at: datetime | None = None
 
+    # The analysis behind this import (Milestone 8): its latest `analyse_import` job and that job's
+    # status, so an imports page can say "queued", "analysing", "done" or "failed" after a reload,
+    # not only straight after the upload. Both are null when no analysis was queued - a file in
+    # which no row could be stored.
+    job_id: str | None = None
+    analysis_status: Literal["queued", "running", "succeeded", "failed"] | None = None
+
 
 class ImportAccepted(ImportSummary):
-    """The response to an upload: what was stored, what was not, and what happens next."""
+    """
+    The response to an upload: what was stored, what was not, and what happens next.
 
-    job_id: str | None = None
+    `job_id` and `analysis_status` describe the analysis this upload queued. For an identical
+    re-upload they are null - nothing new was queued - and `duplicate_upload` is true.
+    """
+
     duplicates_in_file: int = 0
     duplicates_in_database: int = 0
     # True when this exact file had already been imported: nothing new was created and

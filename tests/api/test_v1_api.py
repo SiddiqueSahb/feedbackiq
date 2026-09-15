@@ -462,7 +462,9 @@ def test_uploading_stores_the_file_for_the_sessions_organisation(client, monkeyp
 
     def record(organisation_id, raw, filename):
         received.update(organisation_id=organisation_id, raw=raw, filename=filename)
-        return ImportAccepted(**import_summary().model_dump(), job_id=JOB_ID)
+        # job_id is a field of ImportSummary itself since Milestone 8, so it is set in the dump
+        # rather than passed alongside it.
+        return ImportAccepted(**{**import_summary().model_dump(), "job_id": JOB_ID})
 
     monkeypatch.setattr(upload_routes, "_store_import", record)
 
