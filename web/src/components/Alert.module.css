@@ -1,0 +1,33 @@
+.alert {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+}
+
+.title {
+  font-weight: var(--weight-semibold);
+  margin-bottom: var(--space-1);
+}
+
+.body {
+  color: inherit;
+}
+
+.error {
+  background: var(--color-danger-soft);
+  border-color: var(--color-danger-border);
+  color: var(--color-danger);
+}
+
+.info {
+  background: var(--color-info-soft);
+  border-color: var(--color-info-border);
+  color: var(--color-text);
+}
+
+.success {
+  background: var(--color-success-soft);
+  border-color: #abefc6;
+  color: var(--color-success);
+}

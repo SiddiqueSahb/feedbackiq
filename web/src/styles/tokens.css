@@ -1,0 +1,88 @@
+/*
+ * Design tokens: the only place colours, spacing, type and radii are defined.
+ * Components reference these variables, never raw values, so the product stays visually
+ * consistent and a change of palette is a change to this file.
+ *
+ * Direction: a quiet, dense, work-focused interface. Neutral surfaces, ink-dark primary
+ * actions, one accent used sparingly for focus and links. Sentiment colours are chosen to stay
+ * distinguishable with the common colour-vision deficiencies (teal / slate / burnt orange rather
+ * than green / amber / red), and are always accompanied by a text label.
+ */
+
+:root {
+  /* Surfaces */
+  --color-canvas: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f1f3f6;
+  --color-sidebar: #fbfbfc;
+
+  /* Lines */
+  --color-border: #e4e7ec;
+  --color-border-strong: #cdd2da;
+
+  /* Text */
+  --color-text: #16181d;
+  --color-text-muted: #545c69;
+  --color-text-subtle: #858d99;
+  --color-text-inverse: #ffffff;
+
+  /* Actions */
+  --color-primary: #16181d;
+  --color-primary-hover: #2c3038;
+  --color-accent: #3e5bd8;
+  --color-accent-soft: #eef1fd;
+  --color-focus-ring: rgba(62, 91, 216, 0.35);
+
+  /* Feedback */
+  --color-danger: #b42318;
+  --color-danger-soft: #fef3f2;
+  --color-danger-border: #fecdca;
+  --color-success: #0f7a55;
+  --color-success-soft: #ecfdf3;
+  --color-info-soft: #f0f4ff;
+  --color-info-border: #c7d3fb;
+
+  /* Sentiment - always paired with a label */
+  --color-sentiment-positive: #0f766e;
+  --color-sentiment-neutral: #64748b;
+  --color-sentiment-negative: #c2410c;
+
+  /* Type */
+  --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --text-xs: 0.75rem;     /* 12px - table meta, badges */
+  --text-sm: 0.8125rem;   /* 13px - dense UI, labels */
+  --text-md: 0.875rem;    /* 14px - body */
+  --text-lg: 1rem;        /* 16px */
+  --text-xl: 1.25rem;     /* 20px - page titles */
+  --text-2xl: 1.5rem;     /* 24px */
+  --text-3xl: 1.875rem;   /* 30px - KPI figures */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+
+  /* Space: a 4px grid */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+
+  /* Shape */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --shadow-md: 0 4px 12px rgba(16, 24, 40, 0.08);
+
+  /* Layout */
+  --sidebar-width: 232px;
+  --content-max-width: 1200px;
+  --control-height: 36px;
+}

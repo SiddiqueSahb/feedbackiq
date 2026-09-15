@@ -1,10 +1,13 @@
 # CI for FeedbackIQ.
 #
-# Four jobs, each waiting for the previous one:
+# The Python jobs each wait for the previous one:
 #   lint          fast: catches syntax errors and undefined names
 #   test          the offline pytest safety net (no models, datasets or API keys needed)
 #   db-test       migrations and persistence against a real PostgreSQL service container
-#   docker-build  proves both images still build, the real test of "is this deployable"
+#   docker-build  proves the images still build, the real test of "is this deployable"
+#
+# The web app (Milestone 8) runs alongside them:
+#   web           lint, type-check, generated API types up to date, unit tests, production build
 #
 # The rest of the repository (training notebooks, evaluation scripts) needs
 # multi-GB data/model files that don't belong in a CI runner, so this pipeline
@@ -21,6 +24,45 @@ on:
     branches: [main]
 
 jobs:
+
+  web:
+    name: Web app - lint, types, tests, build
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      # `npm ci`, not `npm install`: it installs exactly what package-lock.json pins and fails if
+      # the lock file and package.json disagree.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type-check
+        run: npm run typecheck
+
+      # schema.d.ts must match the committed OpenAPI document. The document itself is checked
+      # against the live API by tests/api/test_openapi_document.py in the `test` job.
+      - name: Generated API types are up to date
+        run: npm run api:check
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Production build
+        run: npm run build
 
   lint:
     name: Lint src, frontend & tests

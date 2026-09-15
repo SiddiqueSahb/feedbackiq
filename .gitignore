@@ -86,3 +86,11 @@ notebooks/
 /build/
 /dist/
 *.egg-info/
+
+# Web app (Milestone 8). package-lock.json IS committed: it pins every transitive dependency.
+web/node_modules/
+web/dist/
+web/test-results/
+web/playwright-report/
+web/blob-report/
+web/playwright/.cache/

@@ -30,6 +30,14 @@ scripts/
 evaluate/
 test_pipeline.py
 
+# Web app (Milestone 8): the image installs its own dependencies and builds inside the
+# container, so the host's node_modules and build output must never be sent to Docker.
+web/node_modules/
+web/dist/
+web/test-results/
+web/playwright-report/
+web/blob-report/
+
 # OS / editor noise
 .DS_Store
 .vscode/
