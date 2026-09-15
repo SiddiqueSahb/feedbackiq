@@ -236,10 +236,11 @@ def test_the_canonical_taxonomy_supplies_a_key_for_every_category():
 
     categories = categories_from_dicts(load_default_taxonomy())
 
-    assert len(categories) == 24
+    # The product taxonomy (2.0.0) from Milestone 6.
+    assert len(categories) == 13
     # Identities are keys, not display names: lower_snake_case and unique.
     assert all(category.id.islower() and " " not in category.id for category in categories)
-    assert len({category.id for category in categories}) == 24
+    assert len({category.id for category in categories}) == 13
 
 
 def test_a_category_without_a_description_falls_back_to_its_name():

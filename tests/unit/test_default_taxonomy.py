@@ -29,7 +29,11 @@ from feedbackiq.core.taxonomy import (
     taxonomy_version,
 )
 
-EXPECTED_CATEGORIES = 24
+# The product taxonomy (2.0.0) is the default from Milestone 6 onward. The dissertation's
+# 24 discovered categories are retained as a separate, still-loadable taxonomy - see
+# test_the_research_taxonomy_is_retained_alongside_the_product_one below.
+EXPECTED_CATEGORIES = 13
+EXPECTED_RESEARCH_CATEGORIES = 24
 
 # The 7 static categories that used to be substituted silently. Named here so a test can
 # prove they are gone rather than merely unused.
@@ -72,7 +76,7 @@ def test_the_taxonomy_file_is_packaged_with_the_code():
     json.loads(packaged.read_text(encoding="utf-8"))
 
 
-def test_the_default_taxonomy_has_exactly_twenty_four_categories():
+def test_the_default_taxonomy_has_the_expected_number_of_categories():
     categories = load_default_taxonomy()
 
     assert len(categories) == EXPECTED_CATEGORIES
@@ -97,6 +101,60 @@ def test_the_taxonomy_carries_no_research_only_fields():
     the only field added since the file was first packaged."""
     for entry in load_default_taxonomy():
         assert set(entry) == {"key", "category", "description", "exemplars"}
+
+
+def test_the_product_taxonomy_is_the_default():
+    """Milestone 6: the customer-facing taxonomy, not the dissertation's discovered one."""
+    assert taxonomy_provenance()["id"] == "product-13"
+    assert taxonomy_version() == "2.0.0"
+    assert len(load_default_taxonomy()) == EXPECTED_CATEGORIES
+
+
+def test_the_research_taxonomy_is_retained_alongside_the_product_one():
+    """
+    Not deleted, not overwritten: it is published research evidence, and rows in the
+    `categories` table still point at it, so historical analysis keeps resolving.
+    """
+    from feedbackiq.core.taxonomy import (
+        dissertation_taxonomy_provenance,
+        load_dissertation_taxonomy,
+    )
+
+    research = load_dissertation_taxonomy()
+
+    assert len(research) == EXPECTED_RESEARCH_CATEGORIES
+    assert dissertation_taxonomy_provenance() == {
+        "id": "complaint-24",
+        "version": "1.1.0",
+        "categories": EXPECTED_RESEARCH_CATEGORIES,
+    }
+
+
+def test_the_two_taxonomies_share_no_keys():
+    """A key identifies one category for all time; reusing one across taxonomies would make
+    a stored result ambiguous."""
+    from feedbackiq.core.taxonomy import load_dissertation_taxonomy
+
+    product = {entry["key"] for entry in load_default_taxonomy()}
+    research = {entry["key"] for entry in load_dissertation_taxonomy()}
+
+    assert not (product & research)
+
+
+def test_the_product_taxonomy_covers_the_business_themes_the_research_one_missed():
+    """The gaps Milestone 5B measured: billing, refunds and account access had no category
+    at all, which is why "charged me twice" landed in Product Performance Failures."""
+    keys = {entry["key"] for entry in load_default_taxonomy()}
+
+    assert {"billing_and_payments", "refunds_and_returns", "account_and_access"} <= keys
+
+
+def test_there_is_no_catch_all_other_category():
+    """Deliberate: the 0.35 threshold already produces "Unclassified / Emerging Complaint",
+    and an Other bucket would absorb weak matches and destroy that signal."""
+    keys = {entry["key"] for entry in load_default_taxonomy()}
+
+    assert not ({"other", "general", "general_feedback", "miscellaneous"} & keys)
 
 
 def test_every_category_has_a_stable_machine_readable_key():

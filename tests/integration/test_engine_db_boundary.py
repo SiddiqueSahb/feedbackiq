@@ -56,8 +56,8 @@ class FakeSentiment:
 class FakeCategoriser:
     def categorise_batch(self, texts, categories):
         match = CategoryMatch(
-            category_id="Service and Wait Time Delays",
-            name="Service and Wait Time Delays",
+            category_id="wait_times_and_delays",
+            name="Wait Times & Delays",
             score=0.77,
         )
         return [CategorisationOutcome(top=match, candidates=(match,)) for _ in texts]
@@ -145,8 +145,10 @@ def test_engine_output_can_be_stored_without_the_engine_knowing_how(
             # A one-category taxonomy is enough here; the real one will come from the
             # database, which is the point of the engine taking categories as an argument.
             Category(
-                id="Service and Wait Time Delays",
-                name="Service and Wait Time Delays",
+                # A product-taxonomy key, so persistence can resolve it against the seeded
+                # categories - which is the hand-off this test exists to prove.
+                id="wait_times_and_delays",
+                name="Wait Times & Delays",
                 description="Customers wait too long to be served.",
             ),
         ),

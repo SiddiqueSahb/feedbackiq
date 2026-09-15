@@ -99,13 +99,18 @@ def _ensure_data_source(session: Session, organisation: Organisation) -> tuple[D
 
 def _ensure_default_categories(session: Session) -> int:
     """
-    Insert any of the canonical default categories that are not there yet.
+    Insert any of the canonical **product** categories that are not there yet.
 
     Matched on `key`, not on `name`: the key is the stable identity, so a category whose
     display name was reworded is recognised as the same category instead of being seeded a
     second time. The name is updated in place when it differs.
+
+    Research categories already in the table are left completely alone. They are marked
+    `source='discovered'` and `is_active=false` by migration 0003, and they stay because
+    analysis results produced before Milestone 6 point at those rows - deleting them would
+    orphan history to tidy up a list.
     """
-    log.info("Seeding the canonical taxonomy, version %s", taxonomy_version())
+    log.info("Seeding the product taxonomy, version %s", taxonomy_version())
 
     existing = {
         category.key: category

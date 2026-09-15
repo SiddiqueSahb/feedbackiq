@@ -33,9 +33,19 @@ from pathlib import Path
 
 from feedbackiq.core.exceptions import TaxonomyError
 
-# The package the canonical file is installed into, and its name there.
+# The package the canonical files are installed into.
 TAXONOMY_PACKAGE = "feedbackiq.core"
-TAXONOMY_FILENAME = "default_categories.json"
+
+# The customer-facing product taxonomy (2.0.0) - what the engine categorises against and
+# what the seed installs. Designed in Milestone 6 from the evidence in
+# docs/production/taxonomy-product-review.md.
+TAXONOMY_FILENAME = "product_categories.json"
+
+# The dissertation's discovered taxonomy (1.1.0), kept and still loadable. Its rows stay in
+# the `categories` table so historical analysis resolves, and research work that needs the
+# published set asks for it by name. It is NOT the product default any more: nine of its 24
+# categories are single-vertical research artefacts.
+DISSERTATION_TAXONOMY_FILENAME = "default_categories.json"
 
 # What every category must carry. `description` is the NLI hypothesis the zero-shot model
 # compares against, so an empty one silently breaks categorisation - hence required.
@@ -51,12 +61,17 @@ REGENERATE_HINT = (
 
 def taxonomy_document(path: Path | None = None) -> dict:
     """
-    The whole taxonomy file: provenance metadata plus the categories.
+    The whole product taxonomy file: provenance metadata plus the categories.
 
     `path` is for tests and for checking a file before shipping it; production always uses
     the packaged copy.
     """
-    text = _read_text(path)
+    return _document(TAXONOMY_FILENAME, path)
+
+
+def _document(filename: str, path: Path | None = None) -> dict:
+    """Read, parse and validate one packaged taxonomy file (or an explicit path)."""
+    text = _read_text(path, filename)
 
     try:
         document = json.loads(text)
@@ -87,8 +102,30 @@ def load_default_taxonomy(path: Path | None = None) -> list[dict]:
     return list(taxonomy_document(path)["categories"])
 
 
+def load_dissertation_taxonomy() -> list[dict]:
+    """
+    The dissertation's 24 discovered categories (taxonomy 1.1.0).
+
+    Retained deliberately: it is published research evidence, its rows remain in the
+    database so stored results keep resolving, and the research scripts still reproduce
+    against it. It is no longer the product default - see `load_default_taxonomy`.
+    """
+    return list(_document(DISSERTATION_TAXONOMY_FILENAME)["categories"])
+
+
+def dissertation_taxonomy_provenance() -> dict[str, object]:
+    """Identity of the research taxonomy, for documentation and tests."""
+    document = _document(DISSERTATION_TAXONOMY_FILENAME)
+
+    return {
+        "id": str(document["taxonomy_id"]),
+        "version": str(document["taxonomy_version"]),
+        "categories": len(document["categories"]),
+    }
+
+
 def taxonomy_version(path: Path | None = None) -> str:
-    """The version recorded in the file, e.g. "1.0.0"."""
+    """The version recorded in the file, e.g. "2.0.0"."""
     return str(taxonomy_document(path)["taxonomy_version"])
 
 
@@ -111,8 +148,8 @@ def taxonomy_provenance(path: Path | None = None) -> dict[str, object]:
 # ---------------------------------------------------------------- internals
 
 
-def _read_text(path: Path | None) -> str:
-    """Read the packaged file, or an explicit path when one is given."""
+def _read_text(path: Path | None, filename: str = TAXONOMY_FILENAME) -> str:
+    """Read the named packaged file, or an explicit path when one is given."""
     if path is not None:
         try:
             return Path(path).read_text(encoding="utf-8")
@@ -123,11 +160,11 @@ def _read_text(path: Path | None) -> str:
                 f"Cannot read the taxonomy at '{path}': {exc}. {REGENERATE_HINT}"
             ) from exc
 
-    resource = resources.files(TAXONOMY_PACKAGE).joinpath(TAXONOMY_FILENAME)
+    resource = resources.files(TAXONOMY_PACKAGE).joinpath(filename)
 
     if not resource.is_file():
         raise TaxonomyError(
-            f"The canonical taxonomy '{TAXONOMY_FILENAME}' is not installed in "
+            f"The canonical taxonomy '{filename}' is not installed in "
             f"{TAXONOMY_PACKAGE}. It ships with the package: check that "
             "[tool.setuptools.package-data] still includes it and reinstall "
             f"(pip install -e .). {REGENERATE_HINT}"

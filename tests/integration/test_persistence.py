@@ -47,7 +47,13 @@ VERSIONS = {
 }
 
 
-def negative_result(feedback_id, *, category="Service and Wait Time Delays", score=0.81):
+# A category from the product taxonomy (2.0.0). `category_id` carries the stable key, which
+# is what the engine puts there and what persistence resolves on.
+CATEGORY_KEY = "wait_times_and_delays"
+CATEGORY_NAME = "Wait Times & Delays"
+
+
+def negative_result(feedback_id, *, key=CATEGORY_KEY, category=CATEGORY_NAME, score=0.81):
     return ItemAnalysis(
         feedback_id=str(feedback_id),
         sentiment=SentimentPrediction(
@@ -56,10 +62,10 @@ def negative_result(feedback_id, *, category="Service and Wait Time Delays", sco
             scores={"negative": 0.9712, "neutral": 0.02, "positive": 0.0088},
             model_version="distilbert-finetuned-final@abc123def456",
         ),
-        category=CategoryMatch(category_id=category, name=category, score=score),
+        category=CategoryMatch(category_id=key, name=category, score=score),
         candidate_categories=(
-            CategoryMatch(category_id=category, name=category, score=score),
-            CategoryMatch(category_id="other", name="Product Quality Issues", score=0.11),
+            CategoryMatch(category_id=key, name=category, score=score),
+            CategoryMatch(category_id="pricing_and_value", name="Pricing & Value", score=0.11),
         ),
     )
 
@@ -166,8 +172,8 @@ def test_a_result_keeps_the_columns_a_dashboard_filters_on(session, organisation
     # Read as a block, never filtered on - so JSONB rather than three more columns.
     assert result.sentiment_scores["negative"] == pytest.approx(0.9712)
     assert [c["name"] for c in result.candidate_categories] == [
-        "Service and Wait Time Delays",
-        "Product Quality Issues",
+        CATEGORY_NAME,
+        "Pricing & Value",
     ]
 
 
@@ -184,7 +190,8 @@ def test_a_category_is_resolved_by_name_against_the_taxonomy(
 
     result = session.scalar(select(AnalysisResult))
     category = session.get(Category, result.category_id)
-    assert category.name == "Service and Wait Time Delays"
+    assert category.key == CATEGORY_KEY
+    assert category.name == CATEGORY_NAME
     assert category.organisation_id is None          # the shared default taxonomy
     assert float(result.category_confidence) == pytest.approx(0.81)
 
@@ -196,8 +203,8 @@ def test_an_organisations_own_category_wins_over_the_default_of_the_same_name(
         organisation_id=organisation.id,
         # The same stable key as the global default, in this organisation's own scope: the
         # key is how the engine's result is resolved, and the organisation's row wins.
-        key="service_and_wait_time_delays",
-        name="Service and Wait Time Delays",
+        key=CATEGORY_KEY,
+        name=CATEGORY_NAME,
         description="How this customer defines slow service.",
         source="custom",
     )

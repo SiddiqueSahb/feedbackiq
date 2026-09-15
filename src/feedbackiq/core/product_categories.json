@@ -1,0 +1,155 @@
+{
+  "taxonomy_id": "product-13",
+  "taxonomy_version": "2.0.0",
+  "category_count": 13,
+  "generated_on": "2026-09-14",
+  "generated_by": "Designed in Milestone 6 from the evidence in docs/production/taxonomy-product-review.md and milestone-06.md: the discovered taxonomy's assignment counts and platform spread, its own 450-review evaluation (27.6% unclassified, smallest category 1 review), description-embedding confusability, and the business themes the discovered set never covered.",
+  "source_file": "src/feedbackiq/core/default_categories.json (research taxonomy 1.1.0, retained)",
+  "notes": "The customer-facing product taxonomy. Broad, industry-neutral themes a business would recognise, replacing single-vertical research artefacts such as Salon Service Failures and Mirror Performance Failures. The research taxonomy 1.1.0 is NOT deleted: it stays packaged as default_categories.json, its rows stay in the categories table so historical analysis still resolves, and it remains loadable through core.taxonomy.load_dissertation_taxonomy(). 'key' is the stable identity and must never be regenerated when a display name changes. There is deliberately no catch-all 'Other' category: the categoriser's 0.35 confidence threshold already yields 'Unclassified / Emerging Complaint', and an Other bucket would absorb weak matches and destroy that emerging-issue signal.",
+  "changelog": [
+    {
+      "version": "1.0.0",
+      "change": "Packaged the 24 BERTopic-discovered categories as product reference data (Milestone 5A)."
+    },
+    {
+      "version": "1.1.0",
+      "change": "Added stable machine-readable keys; no names, descriptions or exemplars changed (Milestone 5B)."
+    },
+    {
+      "version": "2.0.0",
+      "change": "New designed product taxonomy of 13 industry-neutral categories (Milestone 6). The 1.1.0 research taxonomy is retained, not replaced in place; historical results keep resolving to their original category rows."
+    }
+  ],
+  "categories": [
+    {
+      "key": "product_quality_and_performance",
+      "category": "Product Quality & Performance",
+      "description": "The product, food or drink is defective, stale, poor quality, or performs worse than it should.",
+      "exemplars": [
+        "stopped working after two weeks",
+        "the food was cold and tasteless",
+        "poor build quality for the price"
+      ]
+    },
+    {
+      "key": "product_not_as_described",
+      "category": "Not As Described",
+      "description": "The item received is a different item, colour or size from the one that was ordered.",
+      "exemplars": [
+        "the colour is nothing like the photo",
+        "they sent a different model than I ordered",
+        "sizing runs completely wrong"
+      ]
+    },
+    {
+      "key": "delivery_and_fulfilment",
+      "category": "Delivery & Fulfilment",
+      "description": "A delivery or parcel arrived late, never arrived, was damaged in transit, or contained missing or wrong items.",
+      "exemplars": [
+        "the parcel arrived a week late",
+        "items were missing from the order",
+        "the courier lost the delivery"
+      ]
+    },
+    {
+      "key": "wait_times_and_delays",
+      "category": "Wait Times & Delays",
+      "description": "Customers waited too long to be served, seated, answered or processed.",
+      "exemplars": [
+        "waited forty minutes for a table",
+        "queued for over an hour",
+        "nobody came to take our order"
+      ]
+    },
+    {
+      "key": "service_quality",
+      "category": "Service Quality",
+      "description": "Staff were rude, unprofessional, careless or unhelpful in person.",
+      "exemplars": [
+        "the staff were rude and dismissive",
+        "nobody seemed to care about the problem",
+        "unprofessional behaviour from the team"
+      ]
+    },
+    {
+      "key": "support_responsiveness",
+      "category": "Support Responsiveness",
+      "description": "Customer support failed to respond, follow up or resolve the issue after it was raised.",
+      "exemplars": [
+        "no reply to three emails",
+        "support closed my ticket without fixing anything",
+        "promised a callback that never came"
+      ]
+    },
+    {
+      "key": "billing_and_payments",
+      "category": "Billing & Payments",
+      "description": "Charges, invoices or payments were wrong, duplicated, unexpected or failed to process.",
+      "exemplars": [
+        "charged me twice for the same order",
+        "hidden fees appeared on the invoice",
+        "the payment would not go through"
+      ]
+    },
+    {
+      "key": "pricing_and_value",
+      "category": "Pricing & Value",
+      "description": "The price is considered too high, unfair or poor value for what was received.",
+      "exemplars": [
+        "far too expensive for what you get",
+        "not worth the money",
+        "prices went up with no warning"
+      ]
+    },
+    {
+      "key": "refunds_and_returns",
+      "category": "Refunds & Returns",
+      "description": "A refund has not been paid back, or a return, exchange or cancellation was refused, delayed or mishandled.",
+      "exemplars": [
+        "still waiting for my refund",
+        "they refused to accept the return",
+        "cancellation was ignored"
+      ]
+    },
+    {
+      "key": "account_and_access",
+      "category": "Account & Access",
+      "description": "Customers cannot sign in, register, recover access or reach their own account.",
+      "exemplars": [
+        "cannot log in to my account",
+        "password reset email never arrives",
+        "locked out with no way back in"
+      ]
+    },
+    {
+      "key": "app_and_technical_issues",
+      "category": "App & Technical Issues",
+      "description": "An app, website or online service crashes, shows an error, fails to load, or will not complete an action.",
+      "exemplars": [
+        "the app crashes every time I open it",
+        "the website throws an error at checkout",
+        "keeps disconnecting from the network"
+      ]
+    },
+    {
+      "key": "booking_and_scheduling",
+      "category": "Booking & Scheduling",
+      "description": "A booking, appointment, reservation or scheduled journey was cancelled, changed or could not be made.",
+      "exemplars": [
+        "my flight was cancelled two hours before departure",
+        "the appointment was moved three times",
+        "no availability despite the confirmation"
+      ]
+    },
+    {
+      "key": "facilities_and_environment",
+      "category": "Facilities & Environment",
+      "description": "The premises were unclean, uncomfortable, unsafe or poorly maintained.",
+      "exemplars": [
+        "the toilets were filthy",
+        "far too noisy to hold a conversation",
+        "broken seating and peeling paint"
+      ]
+    }
+  ]
+}

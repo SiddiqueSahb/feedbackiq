@@ -15,6 +15,10 @@ from feedbackiq.db.seed import DEV_ORG_SLUG, default_categories, seed
 
 pytestmark = pytest.mark.integration
 
+# The product taxonomy (2.0.0) is what the seed installs from Milestone 6. The 24 research
+# categories are retired in place by migration 0003, not seeded and not deleted.
+EXPECTED_CATEGORIES = 13
+
 
 def test_seeding_an_empty_database_creates_a_development_organisation(session):
     counts = seed(session)
@@ -31,16 +35,16 @@ def test_seeding_an_empty_database_creates_a_development_organisation(session):
     assert source.kind == "csv_upload"
 
 
-def test_seeding_installs_the_twenty_four_default_categories(session):
+def test_seeding_installs_the_product_categories(session):
     counts = seed(session)
     session.commit()
 
-    assert counts["categories_created"] == 24
+    assert counts["categories_created"] == EXPECTED_CATEGORIES
 
     categories = session.scalars(
         select(Category).where(Category.organisation_id.is_(None))
     ).all()
-    assert len(categories) == 24
+    assert len(categories) == EXPECTED_CATEGORIES
     # Global, so every organisation shares them, and every one has the NLI hypothesis the
     # categoriser needs.
     assert all(category.organisation_id is None for category in categories)
@@ -72,7 +76,7 @@ def test_seeding_twice_changes_nothing(session):
         "categories_created": 0,
     }
     assert session.scalar(select(func.count()).select_from(Organisation)) == 1
-    assert session.scalar(select(func.count()).select_from(Category)) == 24
+    assert session.scalar(select(func.count()).select_from(Category)) == EXPECTED_CATEGORIES
 
 
 def test_every_seeded_category_has_a_stable_key(session):
@@ -95,7 +99,7 @@ def test_re_seeding_after_a_rename_updates_the_label_and_keeps_the_identity(sess
     session.commit()
 
     category = session.scalar(
-        select(Category).where(Category.key == "service_and_wait_time_delays")
+        select(Category).where(Category.key == "wait_times_and_delays")
     )
     original_id, original_name = category.id, category.name
     category.name = "Slow Service"          # pretend an earlier taxonomy called it this
@@ -106,12 +110,12 @@ def test_re_seeding_after_a_rename_updates_the_label_and_keeps_the_identity(sess
 
     session.expire_all()
     restored = session.scalar(
-        select(Category).where(Category.key == "service_and_wait_time_delays")
+        select(Category).where(Category.key == "wait_times_and_delays")
     )
     assert counts["categories_created"] == 0        # recognised, not duplicated
     assert restored.id == original_id               # same row, so results still resolve
     assert restored.name == original_name           # label brought back into line
-    assert session.scalar(select(func.count()).select_from(Category)) == 24
+    assert session.scalar(select(func.count()).select_from(Category)) == EXPECTED_CATEGORIES
 
 
 def test_the_seed_does_not_import_the_dissertation_corpus(session):
